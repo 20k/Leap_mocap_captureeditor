@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Goo_game" />
+		<Option pch_mode="2" />
+		<Option compiler="mingw64" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Mech_game" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="mingw64" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Mech_game" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="mingw64" />
+				<Compiler>
+					<Add option="-Ofast" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+			<Target title="Profile">
+				<Option output="bin/Profile/Mech_game" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Profile/" />
+				<Option type="1" />
+				<Option compiler="mingw64" />
+				<Compiler>
+					<Add option="-O3" />
+					<Add option="-DPROFILING" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-std=gnu++14" />
+			<Add option="-DNDEBUG" />
+			<Add option="-DGLEW_STATIC" />
+		</Compiler>
+		<Linker>
+			<Add option="-lmingw32" />
+			<Add option="-lsfml-graphics" />
+			<Add option="-lsfml-audio" />
+			<Add option="-lsfml-network" />
+			<Add option="-lsfml-window" />
+			<Add option="-lsfml-system" />
+			<Add option="-lfreetype" />
+			<Add option="-ljpeg" />
+			<Add option="-lopengl32" />
+			<Add option="-lopencl" />
+			<Add option="-lglew64.dll" />
+			<Add option="-lws2_32" />
+			<Add option="-lwinmm" />
+			<Add option="-lgdi32" />
+			<Add option="-lflac" />
+			<Add option="-lopenal32" />
+			<Add option="-logg" />
+		</Linker>
+		<Unit filename="../openclrenderer/Game/smoke_particles.cpp" />
+		<Unit filename="../openclrenderer/Game/smoke_particles.hpp" />
+		<Unit filename="../openclrenderer/cl2.cl" />
+		<Unit filename="../openclrenderer/clstate.cpp" />
+		<Unit filename="../openclrenderer/clstate.h" />
+		<Unit filename="../openclrenderer/controls.cpp" />
+		<Unit filename="../openclrenderer/controls.hpp" />
+		<Unit filename="../openclrenderer/engine.cpp" />
+		<Unit filename="../openclrenderer/engine.hpp" />
+		<Unit filename="../openclrenderer/goo.cpp" />
+		<Unit filename="../openclrenderer/goo.hpp" />
+		<Unit filename="../openclrenderer/hologram.cpp" />
+		<Unit filename="../openclrenderer/hologram.hpp" />
+		<Unit filename="../openclrenderer/light.cpp" />
+		<Unit filename="../openclrenderer/light.hpp" />
+		<Unit filename="../openclrenderer/logging.cpp" />
+		<Unit filename="../openclrenderer/logging.hpp" />
+		<Unit filename="../openclrenderer/obj_g_descriptor.hpp" />
+		<Unit filename="../openclrenderer/obj_info_struct.cpp" />
+		<Unit filename="../openclrenderer/obj_info_struct.hpp" />
+		<Unit filename="../openclrenderer/obj_load.cpp" />
+		<Unit filename="../openclrenderer/obj_load.hpp" />
+		<Unit filename="../openclrenderer/object.cpp" />
+		<Unit filename="../openclrenderer/object.hpp" />
+		<Unit filename="../openclrenderer/object_context.cpp" />
+		<Unit filename="../openclrenderer/object_context.hpp" />
+		<Unit filename="../openclrenderer/objects_container.cpp" />
+		<Unit filename="../openclrenderer/objects_container.hpp" />
+		<Unit filename="../openclrenderer/ocl.cpp" />
+		<Unit filename="../openclrenderer/ocl.h" />
+		<Unit filename="../openclrenderer/point_cloud.cpp" />
+		<Unit filename="../openclrenderer/point_cloud.hpp" />
+		<Unit filename="../openclrenderer/proj.hpp" />
+		<Unit filename="../openclrenderer/projectile_buffer_gen.cpp" />
+		<Unit filename="../openclrenderer/projectile_buffer_gen.hpp" />
+		<Unit filename="../openclrenderer/settings_loader.cpp" />
+		<Unit filename="../openclrenderer/settings_loader.hpp" />
+		<Unit filename="../openclrenderer/smoke.cpp" />
+		<Unit filename="../openclrenderer/smoke.hpp" />
+		<Unit filename="../openclrenderer/text_handler.cpp" />
+		<Unit filename="../openclrenderer/text_handler.hpp" />
+		<Unit filename="../openclrenderer/texture.cpp" />
+		<Unit filename="../openclrenderer/texture.hpp" />
+		<Unit filename="../openclrenderer/texture_context.cpp" />
+		<Unit filename="../openclrenderer/texture_context.hpp" />
+		<Unit filename="../openclrenderer/texture_manager.cpp" />
+		<Unit filename="../openclrenderer/texture_manager.hpp" />
+		<Unit filename="../openclrenderer/triangle.cpp" />
+		<Unit filename="../openclrenderer/triangle.hpp" />
+		<Unit filename="../openclrenderer/ui_manager.cpp" />
+		<Unit filename="../openclrenderer/ui_manager.hpp" />
+		<Unit filename="../openclrenderer/vec.hpp" />
+		<Unit filename="../openclrenderer/vertex.cpp" />
+		<Unit filename="../openclrenderer/vertex.hpp" />
+		<Unit filename="main.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
