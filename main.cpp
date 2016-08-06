@@ -1,6 +1,8 @@
 #include "../openclrenderer/proj.hpp"
 
 #include <Leap/LeapC.h>
+#include <thread>
+#include <atomic>
 
 ///todo eventually
 ///split into dynamic and static objects
@@ -15,14 +17,16 @@
 struct finger
 {
     vec3f tip;
-    vec3f rot;
+    //vec3f rot;
+    quat rot;
     int hand_id;
 };
 
 struct bone
 {
     vec3f pos;
-    vec3f rot;
+    //vec3f rot;
+    quat rot;
     int hand_id;
 };
 
@@ -41,8 +45,23 @@ struct leap_motion
 
     std::map<uint32_t, LEAP_HAND> hand_map;
 
+    int64_t start_time_us = 0;
+    int64_t current_time_offset_ms = 0;
+
+    bool start_init = false;
+
+    LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
+
+    sf::Clock clk;
+
+    std::thread thr;
+
+    std::atomic_int quit;
+
     leap_motion()
     {
+        quit = 0;
+
         eLeapRS state = LeapCreateConnection(nullptr, &connection);
 
         connection_init = true;
@@ -102,6 +121,7 @@ struct leap_motion
         }
 
         state = LeapPollConnection(connection, 1, evt);
+        state = LeapPollConnection(connection, 1, evt);
 
         uint32_t num = 0;
 
@@ -131,10 +151,26 @@ struct leap_motion
 
         device_init = true;
 
+        LeapCreateClockRebaser(rebase);
+
+        thr = std::thread(&poll, this);
+
         if(state != eLeapRS_Success)
         {
             lg::log("device error ", state);
             return;
+        }
+    }
+
+    void poll()
+    {
+        while(quit == 0)
+        {
+            LEAP_CONNECTION_MESSAGE evt;
+
+            LeapPollConnection(connection, 1, &evt);
+
+            Sleep(1);
         }
     }
 
@@ -143,9 +179,35 @@ struct leap_motion
         if(!device_init)
             return;
 
-        LEAP_CONNECTION_MESSAGE evt;
+        int64_t now = LeapGetNow();
 
-        LeapPollConnection(connection, 0, &evt);
+        LEAP_TRACKING_EVENT* pEvent = (LEAP_TRACKING_EVENT*)calloc(99999, sizeof(char));
+
+        eLeapRS res = LeapInterpolateFrame(connection, now, pEvent, 99999);
+
+        if(res != eLeapRS_Success)
+            printf("res %x\n", res);
+
+        hand_map.clear();
+
+        //printf("hands %i %i\n", pEvent->nHands, now);
+
+        for(int i=0; i<pEvent->nHands; i++)
+        {
+            hand_map[pEvent->pHands[i].id] = pEvent->pHands[i];
+        }
+
+        free(pEvent);
+
+        //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
+
+        //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
+
+        //now -= 10;
+
+        /*LEAP_CONNECTION_MESSAGE evt;
+
+        LeapPollConnection(connection, 1000, &evt);
 
         if(evt.type == eLeapEventType_Tracking)
         {
@@ -159,7 +221,9 @@ struct leap_motion
             }
 
             //printf("%f frame\n", track->framerate);
-        }
+        }*/
+
+        //current_time_offset_ms += ftime;
 
         //printf("%i type\n", evt.type);
     }
@@ -198,14 +262,61 @@ struct leap_motion
             quat q;
             q.from_vec({lb.rotation.x, lb.rotation.y, lb.rotation.z, lb.rotation.w});
 
-            mat3f mat = q.get_rotation_matrix();
+            /*q.q.v[2] = -q.q.v[2];
 
-            //mat.v[2][0] = -mat.v[2][0];
-            //mat.v[2][1] = -mat.v[2][1];
-            //mat.v[2][2] = -mat.v[2][2];
+            q.q = q.q.norm();
 
-            b.rot = mat.get_rotation();
-            //b.rot.v[0] = -b.rot.v[0];
+            vec4f aa = q.to_axis_angle();
+
+            aa.v[3] *= 2.f;
+
+            //aa.v[3] = aa.v[3] * 2;
+
+            if(aa.v[3] >= M_PI)
+            {
+                float angle = aa.v[3];
+
+                angle -= M_PI;
+
+                aa.v[3] = angle;
+            }
+
+            q.load_from_axis_angle(aa);*/
+
+            //q = q.inverse();
+
+            //q.q.v[0] = -q.q.v[0];
+
+
+
+            q.q = q.q.norm();
+
+            vec4f aa = q.to_axis_angle();
+
+            //aa.v[3] *= 2.f;
+
+            /*if(aa.v[3] >= M_PI)
+            {
+                float angle = aa.v[3];
+
+                angle -= M_PI;
+
+                aa.v[3] = angle;
+            }*/
+
+            //if(i == 3)
+            //printf("%f\n", aa.v[3]);
+
+            /*if(aa.v[3] >= M_PI)
+            {
+                aa.v[3] = -aa.v[3] - M_PI;
+            }*/
+
+            aa.v[3] *= 2;
+
+            q.load_from_axis_angle(aa);
+
+            b.rot = q;
 
             ret.push_back(b);
         }
@@ -234,7 +345,10 @@ struct leap_motion
 
                 //vec3f dir = xyz_to_vec(palm);
 
-                vec3f rot = (f.tip - palm_pos).get_euler();
+                //vec3f rot = (f.tip - palm_pos).get_euler();
+
+                /*quaternion q;
+                q.load_from_euler(rot);*/
 
                 f.hand_id = first.id;
 
@@ -251,15 +365,21 @@ struct leap_motion
 
     ~leap_motion()
     {
+        quit = 1;
+
+        thr.join();
+
         if(device_init)
         {
             LeapCloseDevice(*device);
+            LeapDestroyClockRebaser(*rebase);
 
         }
         if(connection_init)
         {
             LeapDestroyConnection(connection);
         }
+
     }
 };
 
