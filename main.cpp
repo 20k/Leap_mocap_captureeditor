@@ -168,7 +168,7 @@ struct leap_motion
         {
             LEAP_CONNECTION_MESSAGE evt;
 
-            LeapPollConnection(connection, 1, &evt);
+            LeapPollConnection(connection, 1000, &evt);
 
             Sleep(1);
         }
@@ -262,57 +262,10 @@ struct leap_motion
             quat q;
             q.from_vec({lb.rotation.x, lb.rotation.y, lb.rotation.z, lb.rotation.w});
 
-            /*q.q.v[2] = -q.q.v[2];
-
-            q.q = q.q.norm();
-
             vec4f aa = q.to_axis_angle();
 
-            aa.v[3] *= 2.f;
-
-            //aa.v[3] = aa.v[3] * 2;
-
-            if(aa.v[3] >= M_PI)
-            {
-                float angle = aa.v[3];
-
-                angle -= M_PI;
-
-                aa.v[3] = angle;
-            }
-
-            q.load_from_axis_angle(aa);*/
-
-            //q = q.inverse();
-
-            //q.q.v[0] = -q.q.v[0];
-
-
-
-            q.q = q.q.norm();
-
-            vec4f aa = q.to_axis_angle();
-
-            //aa.v[3] *= 2.f;
-
-            /*if(aa.v[3] >= M_PI)
-            {
-                float angle = aa.v[3];
-
-                angle -= M_PI;
-
-                aa.v[3] = angle;
-            }*/
-
-            //if(i == 3)
-            //printf("%f\n", aa.v[3]);
-
-            /*if(aa.v[3] >= M_PI)
-            {
-                aa.v[3] = -aa.v[3] - M_PI;
-            }*/
-
-            aa.v[3] *= 2;
+            aa.v[0] = -aa.v[0];
+            aa.v[1] = -aa.v[1];
 
             q.load_from_axis_angle(aa);
 
@@ -403,7 +356,7 @@ struct leap_object_manager
         for(int i=objects.size(); i<fingers.size(); i++)
         {
             objects_container* ctr = context->make_new();
-            ctr->set_file("../openclrenderer/objects/cylinder.obj");
+            ctr->set_file("../openclrenderer/objects/cylinder_forward.obj");
             ctr->set_active(true);
             ///requesting scale will break caching, we cant have a bunch of differently scaled, yet cached objects
             ///yet. Its possible, i just need to figure it out cleanly
@@ -418,7 +371,8 @@ struct leap_object_manager
         for(int i=0; i<fingers.size(); i++)
         {
             objects[i]->set_pos(conv_implicit<cl_float4>(fingers[i].tip));
-            objects[i]->set_rot(conv_implicit<cl_float4>(fingers[i].rot));
+            //objects[i]->set_rot(conv_implicit<cl_float4>(fingers[i].rot));
+            objects[i]->set_rot_quat(fingers[i].rot);
         }
 
         for(int i=fingers.size(); i<objects.size(); i++)
