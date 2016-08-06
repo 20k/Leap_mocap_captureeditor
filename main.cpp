@@ -31,6 +31,13 @@ struct bone : positional
     int hand_id;
 };
 
+struct pinch
+{
+    vec3f pos;
+    float pinch_strength;
+    int hand_id;
+};
+
 struct leap_motion
 {
     LEAP_CONNECTION connection;
@@ -180,7 +187,6 @@ struct leap_motion
             LEAP_CONNECTION_MESSAGE evt;
 
             LeapPollConnection(connection, 1000, &evt);
-
 
             if(evt.type == eLeapEventType_Tracking)
             {
@@ -385,6 +391,29 @@ struct leap_motion
         return ret;
     }
 
+    std::vector<pinch> get_pinches()
+    {
+        std::vector<pinch> ret;
+
+        for(auto& i : hand_map)
+        {
+            LEAP_HAND& h = i.second;
+
+            vec3f thumb_pos = xyz_to_vec(h.thumb.stabilized_tip_position);
+            vec3f index_pos = xyz_to_vec(h.index.stabilized_tip_position);
+
+            pinch p;
+            p.pos = (thumb_pos*1 + index_pos) / 2.f;
+            p.pos.v[2] = -p.pos.v[2];
+            p.pinch_strength = h.pinch_strength;
+            p.hand_id = h.id;
+
+            ret.push_back(p);
+        }
+
+        return ret;
+    }
+
     ~leap_motion()
     {
         quit = 1;
@@ -403,6 +432,142 @@ struct leap_motion
         }
 
         free(pEvent);
+    }
+};
+
+struct bbox
+{
+    vec3f min;
+    vec3f max;
+};
+
+bool within(bbox& b, vec3f test_relative)
+{
+    for(int i=0; i<3; i++)
+        if(test_relative.v[i] < b.min.v[i]) ///lower than minimum point, not inside cube
+            return false;
+
+    for(int i=0; i<3; i++)
+        if(test_relative.v[i] >= b.max.v[i]) ///greater than maximum point, not inside cube
+            return false;
+
+    ///must be within cube
+    return true;
+}
+
+bbox get_bbox(objects_container* obj)
+{
+    vec3f tl = {FLT_MAX, FLT_MAX, FLT_MAX}, br = {FLT_MIN, FLT_MIN, FLT_MIN};
+
+    for(object& o : obj->objs)
+    {
+        for(triangle& t : o.tri_list)
+        {
+            for(vertex& v : t.vertices)
+            {
+                vec3f pos = {v.get_pos().x, v.get_pos().y, v.get_pos().z};
+
+                tl = min(pos, tl);
+                br = max(pos, br);
+            }
+        }
+    }
+
+    return {tl, br};
+}
+
+struct grabbable
+{
+    objects_container* ctr = nullptr;
+    bbox b;
+    int parent_id = -1;
+
+    void init(objects_container* _ctr)
+    {
+        ctr = _ctr;
+
+        b = get_bbox(ctr);
+    }
+
+    bool inside(vec3f pos)
+    {
+        vec3f my_pos = xyz_to_vec(ctr->pos);
+
+        return within(b, pos - my_pos);
+    }
+
+    void parent(int id)
+    {
+        parent_id = id;
+    }
+
+    void unparent()
+    {
+        parent_id = -1;
+    }
+};
+
+struct grabbable_manager
+{
+    std::vector<grabbable> grabbables;
+    leap_motion* motion;
+
+    void init(leap_motion* leap)
+    {
+        motion = leap;
+    }
+
+    void add(objects_container* ctr)
+    {
+        grabbable g;
+        g.init(ctr);
+
+        grabbables.push_back(g);
+    }
+
+    void tick()
+    {
+        std::vector<pinch> pinches = motion->get_pinches();
+
+        for(pinch& p : pinches)
+        {
+            if(p.pinch_strength < 0.3f)
+                continue;
+
+            vec3f pinch_pos = p.pos;
+
+            for(grabbable& g : grabbables)
+            {
+                bool within = g.inside(pinch_pos);
+
+                if(!within)
+                    continue;
+
+                g.parent(p.hand_id);
+
+                //g.ctr->set_pos(conv_implicit<cl_float4>(pinch_pos));
+            }
+        }
+
+        for(grabbable& g : grabbables)
+        {
+            if(g.parent_id == -1)
+                continue;
+
+            bool unparent = true;
+
+            for(pinch& p : pinches)
+            {
+                if(p.hand_id == g.parent_id)
+                {
+                    g.ctr->set_pos(conv_implicit<cl_float4>(p.pos));
+
+                    unparent = false;
+                }
+            }
+
+            g.unparent();
+        }
     }
 };
 
@@ -451,6 +616,42 @@ struct leap_object_manager
     }
 };
 
+void spawn_cubes(object_context& context, grabbable_manager& grab)
+{
+    std::vector<objects_container*> ctr;
+
+    for(int i=0; i<20; i++)
+    {
+        for(int j=0; j<20; j++)
+        {
+            vec3f pos = {i, 200, j};
+
+            pos = pos * (vec3f){10, 1, 10};
+
+            objects_container* sponza = context.make_new();
+            sponza->set_file("../openclrenderer/objects/cube.obj");
+
+            sponza->set_active(true);
+
+            sponza->request_scale(4.f);
+
+            sponza->set_pos(conv_implicit<cl_float4>(pos));
+
+            sponza->cache = false;
+
+            ctr.push_back(sponza);
+        }
+    }
+
+    context.load_active();
+    context.build_request();
+
+    for(auto& i : ctr)
+    {
+        grab.add(i);
+    }
+}
+
 ///gamma correct mipmap filtering
 ///7ish pre tile deferred
 ///try first bounce in SS, then go to global if fail
@@ -474,12 +675,13 @@ int main(int argc, char *argv[])
     context.set_clear_colour({0.25, 0.25, 0.25});
 
     objects_container* sponza = context.make_new();
-    //sponza->set_file("../openclrenderer/objects/cylinder.obj");
-    sponza->set_load_cube_blank({1, 1, 1});
+    sponza->set_file("../openclrenderer/objects/cube.obj");
+    //sponza->set_load_cube_blank({10, 10, 10});
 
     sponza->set_active(true);
 
-    sponza->hide();
+
+    //sponza->hide();
 
     engine window;
 
@@ -533,6 +735,12 @@ int main(int argc, char *argv[])
 
     leap_object_manager leap_object_spawner(&context, &leap);
 
+    grabbable_manager grab_manager;
+    grab_manager.init(&leap);
+
+    spawn_cubes(context, grab_manager);
+
+
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -565,6 +773,7 @@ int main(int argc, char *argv[])
 
         leap.tick();
         leap_object_spawner.tick();
+        grab_manager.tick();
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 
