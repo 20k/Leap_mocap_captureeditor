@@ -3,6 +3,7 @@
 #include <Leap/LeapC.h>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 ///todo eventually
 ///split into dynamic and static objects
@@ -43,6 +44,7 @@ struct leap_motion
     bool device_init = false;
     bool connection_init = false;
 
+    std::map<uint32_t, LEAP_HAND> hand_map_mt;
     std::map<uint32_t, LEAP_HAND> hand_map;
 
     int64_t start_time_us = 0;
@@ -51,6 +53,9 @@ struct leap_motion
     bool start_init = false;
 
     LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
+
+    LEAP_TRACKING_EVENT* pEvent = (LEAP_TRACKING_EVENT*)calloc(99999, sizeof(char));
+
 
     sf::Clock clk;
 
@@ -123,6 +128,10 @@ struct leap_motion
         state = LeapPollConnection(connection, 1, evt);
         state = LeapPollConnection(connection, 1, evt);
 
+        Sleep(100);
+
+        state = LeapPollConnection(connection, 1, evt);
+
         uint32_t num = 0;
 
         state = LeapGetDeviceList(connection, nullptr, &num);
@@ -162,6 +171,8 @@ struct leap_motion
         }
     }
 
+    std::mutex hand_excluder;
+
     void poll()
     {
         while(quit == 0)
@@ -169,6 +180,23 @@ struct leap_motion
             LEAP_CONNECTION_MESSAGE evt;
 
             LeapPollConnection(connection, 1000, &evt);
+
+
+            if(evt.type == eLeapEventType_Tracking)
+            {
+                hand_excluder.lock();
+
+                hand_map_mt.clear();
+
+                const LEAP_TRACKING_EVENT* track = evt.tracking_event;
+
+                for(int i=0; i<track->nHands; i++)
+                {
+                    hand_map_mt[track->pHands[i].id] = track->pHands[i];
+                }
+
+                hand_excluder.unlock();
+            }
 
             Sleep(1);
         }
@@ -179,9 +207,11 @@ struct leap_motion
         if(!device_init)
             return;
 
-        int64_t now = LeapGetNow();
+        /*int64_t now = LeapGetNow();
 
-        LEAP_TRACKING_EVENT* pEvent = (LEAP_TRACKING_EVENT*)calloc(99999, sizeof(char));
+
+        LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
+        LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
         eLeapRS res = LeapInterpolateFrame(connection, now, pEvent, 99999);
 
@@ -190,18 +220,17 @@ struct leap_motion
 
         hand_map.clear();
 
-        //printf("hands %i %i\n", pEvent->nHands, now);
-
         for(int i=0; i<pEvent->nHands; i++)
         {
             hand_map[pEvent->pHands[i].id] = pEvent->pHands[i];
-        }
+        }*/
 
-        free(pEvent);
+        hand_excluder.lock();
 
-        //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
+        hand_map = hand_map_mt;
 
-        //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
+        hand_excluder.unlock();
+
 
         //now -= 10;
 
@@ -222,10 +251,6 @@ struct leap_motion
 
             //printf("%f frame\n", track->framerate);
         }*/
-
-        //current_time_offset_ms += ftime;
-
-        //printf("%i type\n", evt.type);
     }
 
     vec3f get_index_tip()
@@ -308,13 +333,6 @@ struct leap_motion
                 f.pos = xyz_to_vec(d.stabilized_tip_position);
                 f.pos.v[2] = -f.pos.v[2];
 
-                //vec3f dir = xyz_to_vec(palm);
-
-                //vec3f rot = (f.tip - palm_pos).get_euler();
-
-                /*quaternion q;
-                q.load_from_euler(rot);*/
-
                 f.hand_id = first.id;
 
                 std::vector<bone> bones = get_bones(d);
@@ -384,6 +402,7 @@ struct leap_motion
             LeapDestroyConnection(connection);
         }
 
+        free(pEvent);
     }
 };
 
