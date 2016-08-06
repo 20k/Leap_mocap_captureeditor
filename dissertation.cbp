@@ -45,6 +45,8 @@
 			<Add option="-std=gnu++14" />
 			<Add option="-DNDEBUG" />
 			<Add option="-DGLEW_STATIC" />
+			<Add option="-DFLUID" />
+			<Add option="-DNO_KERNEL_DEBUG" />
 		</Compiler>
 		<Linker>
 			<Add option="-lmingw32" />
@@ -64,6 +66,7 @@
 			<Add option="-lflac" />
 			<Add option="-lopenal32" />
 			<Add option="-logg" />
+			<Add option="-lleapC" />
 		</Linker>
 		<Unit filename="../openclrenderer/Game/smoke_particles.cpp" />
 		<Unit filename="../openclrenderer/Game/smoke_particles.hpp" />
