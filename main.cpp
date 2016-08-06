@@ -14,19 +14,19 @@
 
 ///rift head movement is wrong
 
-struct finger
+struct positional
 {
-    vec3f tip;
-    //vec3f rot;
+    vec3f pos;
     quat rot;
+};
+
+struct finger : positional
+{
     int hand_id;
 };
 
-struct bone
+struct bone : positional
 {
-    vec3f pos;
-    //vec3f rot;
-    quat rot;
     int hand_id;
 };
 
@@ -293,8 +293,8 @@ struct leap_motion
                 LEAP_DIGIT d = first.digits[j];
 
                 finger f;
-                f.tip = xyz_to_vec(d.stabilized_tip_position);
-                f.tip.v[2] = -f.tip.v[2];
+                f.pos = xyz_to_vec(d.stabilized_tip_position);
+                f.pos.v[2] = -f.pos.v[2];
 
                 //vec3f dir = xyz_to_vec(palm);
 
@@ -370,7 +370,7 @@ struct leap_object_manager
 
         for(int i=0; i<fingers.size(); i++)
         {
-            objects[i]->set_pos(conv_implicit<cl_float4>(fingers[i].tip));
+            objects[i]->set_pos(conv_implicit<cl_float4>(fingers[i].pos));
             //objects[i]->set_rot(conv_implicit<cl_float4>(fingers[i].rot));
             objects[i]->set_rot_quat(fingers[i].rot);
         }
