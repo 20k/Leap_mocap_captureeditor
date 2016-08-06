@@ -5,6 +5,14 @@
 #include <atomic>
 #include <mutex>
 
+#include "BasicExample.h"
+
+#include "CommonExampleInterface.h"
+#include "CommonGUIHelperInterface.h"
+#include <LinearMath/btTransform.h>
+#include "CommonRigidBodyBase.h"
+
+
 ///todo eventually
 ///split into dynamic and static objects
 
@@ -571,6 +579,12 @@ struct grabbable_manager
     }
 };
 
+struct renderable
+{
+    vec3f pos;
+    quaternion rot;
+};
+
 struct leap_object_manager
 {
     object_context* context;
@@ -612,6 +626,54 @@ struct leap_object_manager
         for(int i=bones.size(); i<objects.size(); i++)
         {
             objects[i]->hide();
+        }
+    }
+};
+
+struct physics_object_manager
+{
+    object_context* context;
+    std::vector<btRigidBody*>* bodies;
+
+    std::vector<objects_container*> objects;
+
+
+    physics_object_manager(object_context* _context, std::vector<btRigidBody*>* _bodies)
+    {
+        context = _context;
+        bodies = _bodies;
+    }
+
+    void tick()
+    {
+        for(int i=objects.size(); i<bodies->size(); i++)
+        {
+            objects_container* ctr = context->make_new();
+            ctr->set_file("../openclrenderer/objects/cube.obj");
+            ctr->set_active(true);
+            ///requesting scale will break caching, we cant have a bunch of differently scaled, yet cached objects
+            ///yet. Its possible, i just need to figure it out cleanly
+            ctr->request_scale(2.f);
+
+            context->load_active();
+            context->build_request();
+
+            objects.push_back(ctr);
+        }
+
+        btTransform trans;
+
+        //for(auto& i : bodies)
+        for(int i=0; i<objects.size() && i < bodies->size(); i++)
+        {
+            objects_container* obj = objects[i];
+            btRigidBody* body = (*bodies)[i];
+
+            body->getMotionState()->getWorldTransform(trans);
+
+            vec3f pos = {trans.getOrigin().x(), trans.getOrigin().y(), trans.getOrigin().z()};
+
+            obj->set_pos(conv_implicit<cl_float4>(pos));
         }
     }
 };
@@ -738,8 +800,18 @@ int main(int argc, char *argv[])
     grabbable_manager grab_manager;
     grab_manager.init(&leap);
 
-    spawn_cubes(context, grab_manager);
+    //spawn_cubes(context, grab_manager);
 
+
+
+	DummyGUIHelper noGfx;
+
+	CommonExampleOptions options(&noGfx);
+	CommonExampleInterface*    example = BasicExampleCreateFunc(options);
+
+	example->initPhysics();
+
+	physics_object_manager phys(&context, example->getBodies());
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
@@ -754,6 +826,9 @@ int main(int argc, char *argv[])
                 window.window.close();
         }
 
+        example->stepSimulation(1.f/60.f);
+        example->tick();
+        phys.tick();
 
         compute::event event;
 
@@ -798,6 +873,9 @@ int main(int argc, char *argv[])
         if(key.isKeyPressed(sf::Keyboard::Comma))
             std::cout << avg_ftime << std::endl;
     }
+
+    example->exitPhysics();
+    delete example;
 
     ///if we're doing async rendering on the main thread, then this is necessary
     window.render_block();
