@@ -277,6 +277,18 @@ struct leap_motion
         return ret;
     }
 
+    quaternion transform_leap(quaternion q)
+    {
+        vec4f aa = q.to_axis_angle();
+
+        aa.v[0] = -aa.v[0];
+        aa.v[1] = -aa.v[1];
+
+        q.load_from_axis_angle(aa);
+
+        return q;
+    }
+
     std::vector<finger> get_fingers()
     {
         std::vector<finger> ret;
@@ -310,6 +322,45 @@ struct leap_motion
                 f.rot = bones.back().rot;
 
                 ret.push_back(f);
+            }
+        }
+
+        return ret;
+    }
+
+    std::vector<positional> get_positionals()
+    {
+        std::vector<positional> ret;
+
+        for(auto& i : hand_map)
+        {
+            LEAP_HAND first = i.second;
+
+            for(int jj=0; jj<5; jj++)
+            {
+                LEAP_DIGIT d = first.digits[jj];
+
+                for(int bb = 0; bb < 4; bb++)
+                {
+                    LEAP_BONE b = d.bones[bb];
+
+                    positional p;
+
+                    vec3f prev = xyz_to_vec(b.prev_joint);
+                    vec3f next = xyz_to_vec(b.next_joint);
+
+                    p.pos = (prev + next) / 2.f;
+                    p.pos.v[2] = -p.pos.v[2];
+
+                    quaternion q;
+                    q.from_vec(xyzw_to_vec(b.rotation));
+
+                    q = transform_leap(q);
+
+                    p.rot = q;
+
+                    ret.push_back(p);
+                }
             }
         }
 
@@ -351,9 +402,9 @@ struct leap_object_manager
 
     void tick()
     {
-        std::vector<finger> fingers = motion->get_fingers();
+        std::vector<positional> bones = motion->get_positionals();
 
-        for(int i=objects.size(); i<fingers.size(); i++)
+        for(int i=objects.size(); i<bones.size(); i++)
         {
             objects_container* ctr = context->make_new();
             ctr->set_file("../openclrenderer/objects/cylinder_forward.obj");
@@ -368,14 +419,13 @@ struct leap_object_manager
             objects.push_back(ctr);
         }
 
-        for(int i=0; i<fingers.size(); i++)
+        for(int i=0; i<bones.size(); i++)
         {
-            objects[i]->set_pos(conv_implicit<cl_float4>(fingers[i].pos));
-            //objects[i]->set_rot(conv_implicit<cl_float4>(fingers[i].rot));
-            objects[i]->set_rot_quat(fingers[i].rot);
+            objects[i]->set_pos(conv_implicit<cl_float4>(bones[i].pos));
+            objects[i]->set_rot_quat(bones[i].rot);
         }
 
-        for(int i=fingers.size(); i<objects.size(); i++)
+        for(int i=bones.size(); i<objects.size(); i++)
         {
             objects[i]->hide();
         }
