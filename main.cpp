@@ -62,6 +62,12 @@ struct leap_motion
     std::map<uint32_t, LEAP_HAND> hand_map_mt;
     std::map<uint32_t, LEAP_HAND> hand_map;
 
+    std::deque<std::map<uint32_t, LEAP_HAND>> hand_history_mt;
+    std::deque<std::map<uint32_t, LEAP_HAND>> hand_history;
+    ///1/110 = 9ms
+    ///9ms * 5 = 45ms delay of smoothing
+    int max_history = 5;
+
     int64_t start_time_us = 0;
     int64_t current_time_offset_ms = 0;
 
@@ -209,6 +215,11 @@ struct leap_motion
                     hand_map_mt[track->pHands[i].id] = track->pHands[i];
                 }
 
+                hand_history_mt.push_back(hand_map_mt);
+
+                if(hand_history_mt.size() > max_history)
+                    hand_history_mt.pop_front();
+
                 hand_excluder.unlock();
             }
 
@@ -242,6 +253,7 @@ struct leap_motion
         hand_excluder.lock();
 
         hand_map = hand_map_mt;
+        hand_history = hand_history_mt;
 
         hand_excluder.unlock();
 
@@ -360,11 +372,11 @@ struct leap_motion
         return ret;
     }
 
-    std::vector<positional> get_positionals()
+    std::vector<positional> hands_to_positional(std::map<uint32_t, LEAP_HAND>& hands)
     {
         std::vector<positional> ret;
 
-        for(auto& i : hand_map)
+        for(auto& i : hands)
         {
             LEAP_HAND first = i.second;
 
@@ -394,6 +406,49 @@ struct leap_motion
                     ret.push_back(p);
                 }
             }
+        }
+
+        return ret;
+    }
+
+    std::vector<positional> get_positionals()
+    {
+       return hands_to_positional(hand_map);
+    }
+
+    std::vector<positional> get_smoothed_positionals()
+    {
+        std::vector<positional> ret;
+
+        if(hand_history.size() == 0)
+            return get_positionals();
+
+        int num = 0;
+
+        for(std::map<uint32_t, LEAP_HAND>& hand : hand_history)
+        {
+            std::vector<positional> this_hand = hands_to_positional(hand);
+
+            if(this_hand.size() != ret.size())
+            {
+                ret = this_hand;
+
+                num = 0;
+            }
+            else
+            {
+                for(int i=0; i<ret.size(); i++)
+                {
+                    ret[i].pos += this_hand[i].pos;
+                }
+            }
+
+            num++;
+        }
+
+        for(auto& i : ret)
+        {
+            i.pos = i.pos / (float)num;
         }
 
         return ret;
@@ -591,6 +646,8 @@ struct leap_object
     btRigidBody* kinematic;
 };
 
+///kinematic bullet
+///gotta smooth out the hands, they're too jittery to directly interact with bullet
 struct leap_object_manager
 {
     object_context* context;
@@ -615,7 +672,7 @@ struct leap_object_manager
 
     void tick()
     {
-        std::vector<positional> bones = motion->get_positionals();
+        std::vector<positional> bones = motion->get_smoothed_positionals();
 
         for(int i=objects.size(); i<bones.size(); i++)
         {
@@ -629,7 +686,10 @@ struct leap_object_manager
             context->load_active();
             context->build_request();
 
-            btRigidBody* body = bullet_scene->createKinematicRigidBody(1.f, start_transform, cylinder);;
+            btRigidBody* body = bullet_scene->createKinematicRigidBody(1.f, start_transform, cylinder);
+
+            body->setFriction(3.f);
+            body->setRollingFriction(3.f);
 
             //btBoxShape* col = body->getCollisionShape();
 
@@ -678,6 +738,7 @@ struct leap_object_manager
     }
 };
 
+///dynamic bullet
 struct physics_object_manager
 {
     object_context* context;
@@ -685,10 +746,13 @@ struct physics_object_manager
 
     std::vector<objects_container*> objects;
 
-    physics_object_manager(object_context* _context, std::vector<btRigidBody*>* _bodies)
+    CommonRigidBodyBase* bullet_scene;
+
+    physics_object_manager(object_context* _context, std::vector<btRigidBody*>* _bodies, CommonRigidBodyBase* _bullet_scene)
     {
         context = _context;
         bodies = _bodies;
+        bullet_scene = _bullet_scene;
     }
 
     void tick()
@@ -876,7 +940,7 @@ int main(int argc, char *argv[])
 
     leap_object_manager leap_object_spawner(&context, &leap, example);
 
-	physics_object_manager phys(&context, example->getBodies());
+	physics_object_manager phys(&context, example->getBodies(), example);
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs

@@ -458,6 +458,18 @@ struct CommonRigidBodyBase : public CommonExampleInterface
         return body;
     }
 
+    void makeKinematic(btRigidBody* body)
+    {
+        body->setCollisionFlags( btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState( DISABLE_DEACTIVATION );
+    }
+
+    void makeDynamic(btRigidBody* body)
+    {
+        body->setCollisionFlags(0);
+        body->setActivationState(ACTIVE_TAG);
+    }
+
 	virtual void renderScene()
 	{
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);

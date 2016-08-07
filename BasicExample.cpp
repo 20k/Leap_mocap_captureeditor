@@ -102,6 +102,8 @@ void BasicExample::initPhysics()
 		btScalar mass(0.);
 		auto rigid = createRigidBody(mass,groundTransform,groundShape, btVector4(0,0,1,1));
 
+		rigid->setFriction(1.f);
+
 		rigid_bodies.push_back(rigid);
 	}
 
@@ -110,7 +112,7 @@ void BasicExample::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		float scale = 10.f;
+		float scale = 20.f;
 
 		btBoxShape* colShape = createBoxShape(btVector3(scale,scale,scale));
 
@@ -144,7 +146,10 @@ void BasicExample::initPhysics()
 										btScalar(2.0*j*scale)));
 
 
-					auto rigid = createRigidBody(mass,startTransform,colShape);
+					btRigidBody* rigid = createRigidBody(mass,startTransform,colShape);
+
+					rigid->setFriction(1.f);
+					rigid->setRollingFriction(1.f);
 
                     rigid_bodies.push_back(rigid);
 				}
