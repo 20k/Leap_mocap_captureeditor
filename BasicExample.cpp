@@ -31,6 +31,7 @@ subject to the following restrictions:
 struct BasicExample : public CommonRigidBodyBase
 {
     std::vector<btRigidBody*> rigid_bodies;
+    //std::vector<btRigidBody*>
 
 	BasicExample(struct GUIHelperInterface* helper)
 		:CommonRigidBodyBase(helper)
@@ -85,7 +86,7 @@ void BasicExample::initPhysics()
 		m_dynamicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe+btIDebugDraw::DBG_DrawContactPoints);
 
 	///create a few basic rigid bodies
-	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(500.),btScalar(50.),btScalar(500.)));
 
 
 	//groundShape->initializePolyhedralFeatures();
@@ -95,7 +96,7 @@ void BasicExample::initPhysics()
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-50,0));
+	groundTransform.setOrigin(btVector3(0,150,0));
 
 	{
 		btScalar mass(0.);
@@ -109,7 +110,9 @@ void BasicExample::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		btBoxShape* colShape = createBoxShape(btVector3(1,1,1));
+		float scale = 10.f;
+
+		btBoxShape* colShape = createBoxShape(btVector3(scale,scale,scale));
 
 
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
@@ -136,9 +139,9 @@ void BasicExample::initPhysics()
 				for(int j = 0;j<ARRAY_SIZE_Z;j++)
 				{
 					startTransform.setOrigin(btVector3(
-										btScalar(2.0*i),
-										btScalar(20+2.0*k),
-										btScalar(2.0*j)));
+										btScalar(2.0*i*scale),
+										btScalar(300+2.0*k*scale),
+										btScalar(2.0*j*scale)));
 
 
 					auto rigid = createRigidBody(mass,startTransform,colShape);
@@ -159,7 +162,7 @@ void BasicExample::renderScene()
 
 }
 
-CommonExampleInterface*    BasicExampleCreateFunc(CommonExampleOptions& options)
+CommonRigidBodyBase*    BasicExampleCreateFunc(CommonExampleOptions& options)
 {
 	return new BasicExample(options.m_guiHelper);
 }

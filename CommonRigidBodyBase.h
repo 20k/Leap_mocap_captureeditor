@@ -410,6 +410,12 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		return box;
 	}
 
+	btCylinderShape* createCylinderShape(const btVector3& halfExtents)
+	{
+	    btCylinderShape* cylinder = new btCylinderShape(halfExtents);
+	    return cylinder;
+	}
+
 	btRigidBody*	createRigidBody(float mass, const btTransform& startTransform, btCollisionShape* shape,  const btVector4& color = btVector4(1, 0, 0, 1))
 	{
 		btAssert((!shape || shape->getShapeType() != INVALID_SHAPE_PROXYTYPE));
@@ -442,7 +448,15 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		return body;
 	}
 
+	btRigidBody* createKinematicRigidBody(float mass, const btTransform& startTransform, btCollisionShape* shape,  const btVector4& color = btVector4(1, 0, 0, 1))
+    {
+        btRigidBody* body = createRigidBody(mass, startTransform, shape, color);
 
+        body->setCollisionFlags( btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState( DISABLE_DEACTIVATION );
+
+        return body;
+    }
 
 	virtual void renderScene()
 	{
