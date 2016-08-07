@@ -470,6 +470,11 @@ struct CommonRigidBodyBase : public CommonExampleInterface
         body->setActivationState(ACTIVE_TAG);
     }
 
+    void makeDisabled(btRigidBody* body)
+    {
+        body->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+    }
+
 	virtual void renderScene()
 	{
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);

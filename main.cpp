@@ -543,11 +543,13 @@ struct grabbable
 {
     objects_container* ctr = nullptr;
     bbox b;
+    btRigidBody* rigid_body = nullptr;
     int parent_id = -1;
 
-    void init(objects_container* _ctr)
+    void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
         ctr = _ctr;
+        rigid_body = _rigid_body;
 
         b = get_bbox(ctr);
     }
@@ -568,22 +570,40 @@ struct grabbable
     {
         parent_id = -1;
     }
+
+    void set_pos(cl_float4 pos)
+    {
+        btTransform newTrans;
+
+        rigid_body->getMotionState()->getWorldTransform(newTrans);
+
+        newTrans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+
+        rigid_body->getMotionState()->setWorldTransform(newTrans);
+
+        ctr->set_pos(pos);
+    }
 };
 
 struct grabbable_manager
 {
     std::vector<grabbable> grabbables;
     leap_motion* motion;
+    CommonRigidBodyBase* bullet_scene;
 
-    void init(leap_motion* leap)
+    void init(leap_motion* leap, CommonRigidBodyBase* _bullet_scene)
     {
         motion = leap;
+        bullet_scene = _bullet_scene;
     }
 
-    void add(objects_container* ctr)
+    void add(objects_container* ctr, btRigidBody* rigid_body)
     {
+        if(rigid_body->isStaticOrKinematicObject())
+            return;
+
         grabbable g;
-        g.init(ctr);
+        g.init(ctr, rigid_body);
 
         grabbables.push_back(g);
     }
@@ -614,8 +634,12 @@ struct grabbable_manager
 
         for(grabbable& g : grabbables)
         {
+            bullet_scene->makeDynamic(g.rigid_body);
+
             if(g.parent_id == -1)
                 continue;
+
+            bullet_scene->makeKinematic(g.rigid_body);
 
             bool unparent = true;
 
@@ -623,7 +647,9 @@ struct grabbable_manager
             {
                 if(p.hand_id == g.parent_id)
                 {
-                    g.ctr->set_pos(conv_implicit<cl_float4>(p.pos));
+                    //g.ctr->set_pos(conv_implicit<cl_float4>(p.pos));
+
+                    g.set_pos(conv_implicit<cl_float4>(p.pos));
 
                     unparent = false;
                 }
@@ -748,11 +774,14 @@ struct physics_object_manager
 
     CommonRigidBodyBase* bullet_scene;
 
-    physics_object_manager(object_context* _context, std::vector<btRigidBody*>* _bodies, CommonRigidBodyBase* _bullet_scene)
+    grabbable_manager* grab_manage;
+
+    physics_object_manager(object_context* _context, std::vector<btRigidBody*>* _bodies, CommonRigidBodyBase* _bullet_scene, grabbable_manager* _grab_manage)
     {
         context = _context;
         bodies = _bodies;
         bullet_scene = _bullet_scene;
+        grab_manage = _grab_manage;
     }
 
     void tick()
@@ -786,6 +815,8 @@ struct physics_object_manager
             context->build_request();
 
             objects.push_back(ctr);
+
+            grab_manage->add(ctr, body);
         }
 
         btTransform trans;
@@ -809,7 +840,7 @@ struct physics_object_manager
     }
 };
 
-void spawn_cubes(object_context& context, grabbable_manager& grab)
+/*void spawn_cubes(object_context& context, grabbable_manager& grab)
 {
     std::vector<objects_container*> ctr;
 
@@ -843,7 +874,7 @@ void spawn_cubes(object_context& context, grabbable_manager& grab)
     {
         grab.add(i);
     }
-}
+}*/
 
 ///gamma correct mipmap filtering
 ///7ish pre tile deferred
@@ -926,9 +957,6 @@ int main(int argc, char *argv[])
 
     leap_motion leap;
 
-    grabbable_manager grab_manager;
-    grab_manager.init(&leap);
-
     //spawn_cubes(context, grab_manager);
 
 	DummyGUIHelper noGfx;
@@ -938,9 +966,13 @@ int main(int argc, char *argv[])
 
 	example->initPhysics();
 
+
+    grabbable_manager grab_manager;
+    grab_manager.init(&leap, example);
+
     leap_object_manager leap_object_spawner(&context, &leap, example);
 
-	physics_object_manager phys(&context, example->getBodies(), example);
+	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
