@@ -91,7 +91,8 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
 		m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 
-		m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
+		///It has been decided! 1 unit = 1mm
+		m_dynamicsWorld->setGravity(btVector3(0, -1000, 0));
 
 		m_dynamicsWorld->setInternalTickCallback(step_callback, &info);
 	}
@@ -101,7 +102,9 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 	{
 		if (m_dynamicsWorld)
 		{
-			m_dynamicsWorld->stepSimulation(deltaTime, 2, 1/120.f);
+			m_dynamicsWorld->stepSimulation(deltaTime, 1, 1/60.f);
+
+			printf("ftime %f\n", deltaTime);
 		}
 	}
 
