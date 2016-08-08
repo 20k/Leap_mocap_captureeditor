@@ -41,6 +41,7 @@ struct bone : positional
 
 struct pinch
 {
+    quat hand_rot;
     vec3f pos;
     float pinch_strength;
     int hand_id;
@@ -471,6 +472,11 @@ struct leap_motion
             p.pinch_strength = h.pinch_strength;
             p.hand_id = h.id;
 
+
+            LEAP_QUATERNION q = h.middle.bones[0].rotation;
+
+            p.hand_rot = convert_leap_quaternion({{q.x, q.y, q.z, q.w}});
+
             ret.push_back(p);
         }
 
@@ -545,6 +551,7 @@ struct grabbable
     bbox b;
     btRigidBody* rigid_body = nullptr;
     int parent_id = -1;
+    quaternion base_diff;
 
     void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
@@ -552,6 +559,8 @@ struct grabbable
         rigid_body = _rigid_body;
 
         b = get_bbox(ctr);
+
+        base_diff = base_diff.identity();
     }
 
     bool inside(vec3f pos)
@@ -561,9 +570,13 @@ struct grabbable
         return within(b, pos - my_pos);
     }
 
-    void parent(int id)
+    void parent(int id, quaternion base, quaternion current_parent)
     {
         parent_id = id;
+
+        base_diff = current_parent.get_difference(base);
+
+        printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
     }
 
     void unparent()
@@ -571,13 +584,34 @@ struct grabbable
         parent_id = -1;
     }
 
-    void set_pos(cl_float4 pos)
+    quaternion get_quat()
     {
         btTransform newTrans;
 
         rigid_body->getMotionState()->getWorldTransform(newTrans);
 
+        btQuaternion bq = newTrans.getRotation();
+
+        return {{bq.x(), bq.y(), bq.z(), bq.w()}};
+    }
+
+    void set_trans(cl_float4 pos, quaternion m)
+    {
+        mat3f mat_diff = base_diff.get_rotation_matrix();
+
+        mat3f current_hand = m.get_rotation_matrix();
+        mat3f my_rot = current_hand * mat_diff;
+
+        quaternion n;
+        n.load_from_matrix(my_rot);
+
+
+        btTransform newTrans;
+
+        rigid_body->getMotionState()->getWorldTransform(newTrans);
+
         newTrans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+        newTrans.setRotation(btQuaternion(n.x(), n.y(), n.z(), n.w()));
 
         rigid_body->getMotionState()->setWorldTransform(newTrans);
 
@@ -612,10 +646,20 @@ struct grabbable_manager
     {
         std::vector<pinch> pinches = motion->get_pinches();
 
+        float pinch_strength = 0.2f;
+
         for(pinch& p : pinches)
         {
-            if(p.pinch_strength < 0.3f)
+            if(p.pinch_strength < pinch_strength)
+            {
+                for(grabbable& g : grabbables)
+                {
+                    if(p.hand_id == g.parent_id)
+                        g.unparent();
+                }
+
                 continue;
+            }
 
             vec3f pinch_pos = p.pos;
 
@@ -626,7 +670,10 @@ struct grabbable_manager
                 if(!within)
                     continue;
 
-                g.parent(p.hand_id);
+                if(g.parent_id != -1)
+                    continue;
+
+                g.parent(p.hand_id, g.get_quat(), p.hand_rot);
 
                 //g.ctr->set_pos(conv_implicit<cl_float4>(pinch_pos));
             }
@@ -649,13 +696,14 @@ struct grabbable_manager
                 {
                     //g.ctr->set_pos(conv_implicit<cl_float4>(p.pos));
 
-                    g.set_pos(conv_implicit<cl_float4>(p.pos));
+                    g.set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
 
                     unparent = false;
                 }
             }
 
-            g.unparent();
+            if(unparent)
+                g.unparent();
         }
     }
 };
