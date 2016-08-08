@@ -265,7 +265,7 @@ struct leap_motion
         //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
         //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
-        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*5, pEvent, 99999);
+        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*2, pEvent, 99999);
 
         if(res != eLeapRS_Success)
             printf("res %x\n", res);
@@ -276,27 +276,6 @@ struct leap_motion
         {
             hand_map[pEvent->pHands[i].id] = pEvent->pHands[i];
         }
-
-
-        //now -= 10;
-
-        /*LEAP_CONNECTION_MESSAGE evt;
-
-        LeapPollConnection(connection, 1000, &evt);
-
-        if(evt.type == eLeapEventType_Tracking)
-        {
-            hand_map.clear();
-
-            const LEAP_TRACKING_EVENT* track = evt.tracking_event;
-
-            for(int i=0; i<track->nHands; i++)
-            {
-                hand_map[track->pHands[i].id] = track->pHands[i];
-            }
-
-            //printf("%f frame\n", track->framerate);
-        }*/
     }
 
     vec3f get_index_tip()
@@ -590,8 +569,10 @@ struct grabbable
 
     uint32_t last_world_id = -1;
 
+    ///try decreasing max history, and using exponential averages etc
+    ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
-    int max_history = 10;
+    int max_history = 8;
 
     void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
@@ -934,7 +915,7 @@ struct leap_object_manager
         for(int i=objects.size(); i<bones.size(); i++)
         {
             objects_container* ctr = context->make_new();
-            ctr->set_file("../openclrenderer/objects/cylinder_forward.obj");
+            ctr->set_file("../openclrenderer/objects/high_cylinder_forward.obj");
             ctr->set_active(true);
             ///requesting scale will break caching, we cant have a bunch of differently scaled, yet cached objects
             ///yet. Its possible, i just need to figure it out cleanly

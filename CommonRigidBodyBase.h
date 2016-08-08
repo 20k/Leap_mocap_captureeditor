@@ -101,7 +101,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 	{
 		if (m_dynamicsWorld)
 		{
-			m_dynamicsWorld->stepSimulation(deltaTime);
+			m_dynamicsWorld->stepSimulation(deltaTime, 2, 1/120.f);
 		}
 	}
 
