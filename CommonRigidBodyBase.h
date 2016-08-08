@@ -12,8 +12,30 @@
 #include "CommonGraphicsAppInterface.h"
 #include "CommonWindowInterface.h"
 
+#include <stdint.h>
+
+namespace collision_masks
+{
+    enum collision_masks
+    {
+        NONE = 0,
+        NORMAL = 1,
+        KINEMATIC = 2,
+        ALL = NORMAL | KINEMATIC
+    };
+}
+
+struct usr_world_info
+{
+    uint32_t internal_step_id = 0;
+};
+
+void step_callback(btDynamicsWorld* world, btScalar timeStep);
+
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
+    usr_world_info info;
+
 		//keep the collision shapes, for deletion/cleanup
 	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
 	btBroadphaseInterface*	m_broadphase;
@@ -70,6 +92,8 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 
 		m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
+
+		m_dynamicsWorld->setInternalTickCallback(step_callback, &info);
 	}
 
 
@@ -445,6 +469,9 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
 		body->setUserIndex(-1);
 		m_dynamicsWorld->addRigidBody(body);
+
+		changeGroup(body, collision_masks::NORMAL, collision_masks::ALL);
+
 		return body;
 	}
 
@@ -454,6 +481,8 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
         body->setCollisionFlags( btCollisionObject::CF_KINEMATIC_OBJECT);
         body->setActivationState( DISABLE_DEACTIVATION );
+
+        changeGroup(body, collision_masks::KINEMATIC, collision_masks::ALL);
 
         return body;
     }
@@ -474,6 +503,26 @@ struct CommonRigidBodyBase : public CommonExampleInterface
     {
         body->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
     }
+
+    ///this is apparently more robust than tinkering with broadphase directly
+    ///although adding a rigid body i think involves a linear search
+    ///so
+    void changeGroup(btRigidBody* body, short group, short collidesWithMask)
+    {
+        m_dynamicsWorld->removeRigidBody(body);
+        m_dynamicsWorld->addRigidBody(body, group, collidesWithMask);
+    }
+
+    short getGroup(btRigidBody* body)
+    {
+        return body->getBroadphaseHandle()->m_collisionFilterGroup;
+    }
+
+    short getMask(btRigidBody* body)
+    {
+        return body->getBroadphaseHandle()->m_collisionFilterMask;
+    }
+
 
 	virtual void renderScene()
 	{

@@ -28,6 +28,18 @@ subject to the following restrictions:
 #include "CommonRigidBodyBase.h"
 #include <vector>
 
+//typedef void (*btInternalTickCallback)(btDynamicsWorld *world, btScalar timeStep);
+
+void step_callback(btDynamicsWorld* world, btScalar timeStep)
+{
+    usr_world_info* info = (usr_world_info*)world->getWorldUserInfo();
+
+    if(info == nullptr)
+        return;
+
+    info->internal_step_id++;
+}
+
 struct BasicExample : public CommonRigidBodyBase
 {
     std::vector<btRigidBody*> rigid_bodies;
@@ -53,14 +65,19 @@ struct BasicExample : public CommonRigidBodyBase
 	{
         //printf("hi\n");
 
-        for(int i=0; i<rigid_bodies.size(); i++)
+        /*for(int i=0; i<rigid_bodies.size(); i++)
         {
             btRigidBody* s = rigid_bodies[i];
 
             btTransform trans;
 
             s->getMotionState()->getWorldTransform(trans);
-        }
+
+            m_dynamicsWorld->removeRigidBody(s);
+            m_dynamicsWorld->addRigidBody(s);
+        }*/
+
+
 
         /*for(btCollisionShape* s : m_collisionShapes)
         {

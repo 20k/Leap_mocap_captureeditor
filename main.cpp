@@ -259,6 +259,25 @@ struct leap_motion
         hand_excluder.unlock();
 
 
+
+        int64_t now = LeapGetNow();
+
+        //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
+        //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
+
+        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*5, pEvent, 99999);
+
+        if(res != eLeapRS_Success)
+            printf("res %x\n", res);
+
+        hand_map.clear();
+
+        for(int i=0; i<pEvent->nHands; i++)
+        {
+            hand_map[pEvent->pHands[i].id] = pEvent->pHands[i];
+        }
+
+
         //now -= 10;
 
         /*LEAP_CONNECTION_MESSAGE evt;
@@ -553,6 +572,27 @@ struct grabbable
     int parent_id = -1;
     quaternion base_diff;
 
+    bool should_hand_collide = true;
+    bool does_hand_collide = true;
+    float time_elapsed_since_release_ms = 3000;
+    ///with kinematic objects
+    float time_needed_since_release_to_recollide_ms = 2000;
+
+    int frame_wait_restore = 0;
+
+    btVector3 vel_back = btVector3(0,0,0);
+
+    bool is_kinematic = false;
+
+    float last_ftime = 0;
+
+    vec3f avg_vel = {0,0,0};
+
+    uint32_t last_world_id = -1;
+
+    std::deque<vec3f> history;
+    int max_history = 10;
+
     void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
         ctr = _ctr;
@@ -570,18 +610,41 @@ struct grabbable
         return within(b, pos - my_pos);
     }
 
-    void parent(int id, quaternion base, quaternion current_parent)
+    ///grabbed
+    void parent(CommonRigidBodyBase* bullet_scene, int id, quaternion base, quaternion current_parent)
     {
         parent_id = id;
 
         base_diff = current_parent.get_difference(base);
 
-        printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
+        should_hand_collide = false;
+
+        make_kinematic(bullet_scene);
+
+        //printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
     }
 
-    void unparent()
+    ///released for whatever reason
+    void unparent(CommonRigidBodyBase* bullet_scene)
     {
         parent_id = -1;
+
+        should_hand_collide = true;
+
+        time_elapsed_since_release_ms = 0;
+
+        make_dynamic(bullet_scene);
+    }
+
+    vec3f get_pos()
+    {
+        btTransform newTrans;
+
+        rigid_body->getMotionState()->getWorldTransform(newTrans);
+
+        btVector3 bq = newTrans.getOrigin();
+
+        return {bq.x(), bq.y(), bq.z()};
     }
 
     quaternion get_quat()
@@ -617,8 +680,126 @@ struct grabbable
 
         ctr->set_pos(pos);
     }
+
+    void make_dynamic(CommonRigidBodyBase* bullet_scene)
+    {
+        if(!is_kinematic)
+            return;
+
+        //rigid_body->saveKinematicState(1/60.f);
+
+        toggleSaveMotion();
+
+        bullet_scene->makeDynamic(rigid_body);
+
+        is_kinematic = false;
+    }
+
+    void make_kinematic(CommonRigidBodyBase* bullet_scene)
+    {
+        if(is_kinematic)
+            return;
+
+        toggleSaveMotion();
+
+        bullet_scene->makeKinematic(rigid_body);
+
+        is_kinematic = true;
+    }
+
+    ///blender appears to calculate a kinematic velocity, but i have no idea how to get it ;_;
+    void toggleSaveMotion()
+    {
+        frame_wait_restore = 2;
+
+        vel_back = rigid_body->getLinearVelocity();
+    }
+
+    void make_no_collide_hands(CommonRigidBodyBase* bullet_scene)
+    {
+        if(!does_hand_collide)
+            return;
+
+        bullet_scene->changeGroup(rigid_body, collision_masks::NORMAL, collision_masks::NORMAL);
+
+        does_hand_collide = false;
+    }
+
+    void make_collide_hands(CommonRigidBodyBase* bullet_scene)
+    {
+        if(does_hand_collide)
+            return;
+
+        bullet_scene->changeGroup(rigid_body, collision_masks::NORMAL, collision_masks::ALL);
+
+        does_hand_collide = true;
+    }
+
+    void tick(float ftime, CommonRigidBodyBase* bullet_scene)
+    {
+        if(time_elapsed_since_release_ms >= time_needed_since_release_to_recollide_ms && should_hand_collide)
+        {
+            make_collide_hands(bullet_scene);
+        }
+
+        if(!should_hand_collide)
+        {
+            make_no_collide_hands(bullet_scene);
+        }
+
+        if(is_kinematic && last_world_id != bullet_scene->info.internal_step_id)
+        {
+            //rigid_body->saveKinematicState(1/60.f);
+
+            btVector3 vel = rigid_body->getLinearVelocity();
+            btVector3 angular = rigid_body->getAngularVelocity();
+
+            //vec3f pos = get_pos();
+
+            //printf("pos %f %f %f\n", pos.v[0], pos.v[1], pos.v[2]);
+
+            avg_vel = avg_vel + (vec3f){vel.x(), vel.y(), vel.z()};
+
+            avg_vel = avg_vel / 2.f;
+
+            history.push_back({vel.x(), vel.y(), vel.z()});
+
+            if(history.size() > max_history)
+                history.pop_front();
+
+            //printf("vel %f %f %f\n", vel.x(), vel.y(), vel.z());
+        }
+
+
+        time_elapsed_since_release_ms += ftime;
+
+        if(frame_wait_restore > 0)
+        {
+            frame_wait_restore--;
+
+            if(frame_wait_restore == 0)
+            {
+                vec3f avg = {0,0,0};
+
+                for(auto& i : history)
+                {
+                    avg += i;
+                }
+
+                if(history.size() > 0)
+                    avg = avg / (float)history.size();
+
+                rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
+            }
+        }
+
+        last_ftime = ftime;
+        last_world_id = bullet_scene->info.internal_step_id;
+    }
 };
 
+///need to disable finger -> collider collisions for x seconds after launch
+///may be easier to simply disable whole collider -> hand collisions
 struct grabbable_manager
 {
     std::vector<grabbable> grabbables;
@@ -642,7 +823,7 @@ struct grabbable_manager
         grabbables.push_back(g);
     }
 
-    void tick()
+    void tick(float ftime)
     {
         std::vector<pinch> pinches = motion->get_pinches();
 
@@ -655,7 +836,7 @@ struct grabbable_manager
                 for(grabbable& g : grabbables)
                 {
                     if(p.hand_id == g.parent_id)
-                        g.unparent();
+                        g.unparent(bullet_scene);
                 }
 
                 continue;
@@ -673,20 +854,23 @@ struct grabbable_manager
                 if(g.parent_id != -1)
                     continue;
 
-                g.parent(p.hand_id, g.get_quat(), p.hand_rot);
-
-                //g.ctr->set_pos(conv_implicit<cl_float4>(pinch_pos));
+                g.parent(bullet_scene, p.hand_id, g.get_quat(), p.hand_rot);
             }
+        }
+
+        ///for some reason the inertia works if we do this here
+        ///but no in tick
+        ///but if down the bottom it works in tick
+        ///but not overall
+        for(grabbable& g : grabbables)
+        {
+            g.tick(ftime, bullet_scene);
         }
 
         for(grabbable& g : grabbables)
         {
-            bullet_scene->makeDynamic(g.rigid_body);
-
             if(g.parent_id == -1)
                 continue;
-
-            bullet_scene->makeKinematic(g.rigid_body);
 
             bool unparent = true;
 
@@ -694,8 +878,6 @@ struct grabbable_manager
             {
                 if(p.hand_id == g.parent_id)
                 {
-                    //g.ctr->set_pos(conv_implicit<cl_float4>(p.pos));
-
                     g.set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
 
                     unparent = false;
@@ -703,8 +885,9 @@ struct grabbable_manager
             }
 
             if(unparent)
-                g.unparent();
+                g.unparent(bullet_scene);
         }
+
     }
 };
 
@@ -1057,7 +1240,7 @@ int main(int argc, char *argv[])
 
         leap.tick();
         leap_object_spawner.tick();
-        grab_manager.tick();
+        grab_manager.tick(c.getElapsedTime().asMicroseconds() / 1000.f);
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 
