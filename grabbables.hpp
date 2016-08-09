@@ -1,6 +1,8 @@
 #ifndef GRABBABLES_HPP_INCLUDED
 #define GRABBABLES_HPP_INCLUDED
 
+#include "leap_object_manager.hpp"
+
 struct grabbable
 {
     objects_container* ctr = nullptr;
@@ -262,11 +264,13 @@ struct grabbable_manager
     std::vector<grabbable> grabbables;
     leap_motion* motion;
     CommonRigidBodyBase* bullet_scene;
+    leap_object_manager* leap_object_manage;
 
-    void init(leap_motion* leap, CommonRigidBodyBase* _bullet_scene)
+    void init(leap_motion* leap, CommonRigidBodyBase* _bullet_scene, leap_object_manager* _leap_object_manage)
     {
         motion = leap;
         bullet_scene = _bullet_scene;
+        leap_object_manage = _leap_object_manage;
     }
 
     void add(objects_container* ctr, btRigidBody* rigid_body)
@@ -301,6 +305,33 @@ struct grabbable_manager
                 }
 
                 continue;
+            }
+
+            ///tips
+            leap_object* index_object = leap_object_manage->get_leap_object(p.hand_id, 1, 3);
+            leap_object* thumb_object = leap_object_manage->get_leap_object(p.hand_id, 0, 3);
+
+            if(index_object != nullptr && thumb_object != nullptr)
+            {
+                bool in_scene = bullet_scene->bodyInScene(index_object->kinematic);
+                in_scene |= bullet_scene->bodyInScene(thumb_object->kinematic);
+
+                if(p.pinch_strength > pinch_strength_to_disable_collisions)
+                {
+                    if(in_scene)
+                    {
+                        bullet_scene->removeRigidBody(index_object->kinematic);
+                        bullet_scene->removeRigidBody(thumb_object->kinematic);
+                    }
+                }
+                else
+                {
+                    if(!in_scene)
+                    {
+                        bullet_scene->addRigidBody(index_object->kinematic);
+                        bullet_scene->addRigidBody(thumb_object->kinematic);
+                    }
+                }
             }
 
             if(p.pinch_strength < pinch_strength_to_grab)

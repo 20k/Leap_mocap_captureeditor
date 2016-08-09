@@ -6,6 +6,8 @@ struct leap_object
 {
     objects_container* ctr;
     btRigidBody* kinematic;
+
+    positional current_positional;
 };
 
 ///kinematic bullet
@@ -31,6 +33,22 @@ struct leap_object_manager
     }
 
     std::vector<leap_object> objects;
+
+
+    leap_object* get_leap_object(int hand_id, int finger_num, int bone_num)
+    {
+        for(auto& i : objects)
+        {
+            positional& p = i.current_positional;
+
+            if(p.hand_id == hand_id && p.finger_num == finger_num && p.bone_num == bone_num)
+                return &i;
+        }
+
+        ///shouldn't happen
+        return nullptr;
+    }
+
 
     void tick()
     {
@@ -64,6 +82,7 @@ struct leap_object_manager
             objects.push_back(obj);
         }
 
+        ///bones.size() strictly <= objects.size()
         for(int i=0; i<bones.size(); i++)
         {
             mat3f mat = bones[i].rot.get_rotation_matrix();
@@ -96,6 +115,8 @@ struct leap_object_manager
             {
                 bullet_scene->addRigidBody(objects[i].kinematic);
             }
+
+            objects[i].current_positional = bones[i];
         }
 
         for(int i=bones.size(); i<objects.size(); i++)

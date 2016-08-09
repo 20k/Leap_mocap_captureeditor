@@ -156,11 +156,10 @@ int main(int argc, char *argv[])
 
 	example->initPhysics();
 
+    leap_object_manager leap_object_spawner(&context, &leap, example);
 
     grabbable_manager grab_manager;
-    grab_manager.init(&leap, example);
-
-    leap_object_manager leap_object_spawner(&context, &leap, example);
+    grab_manager.init(&leap, example, &leap_object_spawner);
 
 	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
 

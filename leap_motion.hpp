@@ -11,6 +11,8 @@ struct positional
     int bone_num = -1;
     ///0 -> 4
     int finger_num = -1;
+    ///who knows. Well, the leap motion people do
+    int hand_id = -1;
 };
 
 struct finger : positional
@@ -388,6 +390,7 @@ struct leap_motion
 
                     p.bone_num = bb;
                     p.finger_num = jj;
+                    p.hand_id = first.id;
 
                     ret.push_back(p);
                 }
