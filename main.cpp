@@ -569,6 +569,8 @@ struct grabbable
 
     uint32_t last_world_id = -1;
 
+    vec3f offset = {0,0,0};
+
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
@@ -592,7 +594,7 @@ struct grabbable
     }
 
     ///grabbed
-    void parent(CommonRigidBodyBase* bullet_scene, int id, quaternion base, quaternion current_parent)
+    void parent(CommonRigidBodyBase* bullet_scene, int id, quaternion base, quaternion current_parent, vec3f position_offset)
     {
         parent_id = id;
 
@@ -601,6 +603,10 @@ struct grabbable
         should_hand_collide = false;
 
         make_kinematic(bullet_scene);
+
+        mat3f hand_rot = current_parent.get_rotation_matrix();
+
+        offset = hand_rot.transp() * position_offset;
 
         //printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
     }
@@ -639,7 +645,7 @@ struct grabbable
         return {{bq.x(), bq.y(), bq.z(), bq.w()}};
     }
 
-    void set_trans(cl_float4 pos, quaternion m)
+    void set_trans(cl_float4 clpos, quaternion m)
     {
         mat3f mat_diff = base_diff.get_rotation_matrix();
 
@@ -650,16 +656,24 @@ struct grabbable
         n.load_from_matrix(my_rot);
 
 
+        vec3f absolute_pos = {clpos.x, clpos.y, clpos.z};
+
+        ///current hand does not take into account the rotation offset when grabbing
+        ///ie we'll double rotate
+        vec3f offset_rot = current_hand * offset;
+
+        vec3f pos = absolute_pos + offset_rot;
+
         btTransform newTrans;
 
         rigid_body->getMotionState()->getWorldTransform(newTrans);
 
-        newTrans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+        newTrans.setOrigin(btVector3(pos.v[0], pos.v[1], pos.v[2]));
         newTrans.setRotation(btQuaternion(n.x(), n.y(), n.z(), n.w()));
 
         rigid_body->getMotionState()->setWorldTransform(newTrans);
 
-        ctr->set_pos(pos);
+        ctr->set_pos(conv_implicit<cl_float4>(pos));
     }
 
     void make_dynamic(CommonRigidBodyBase* bullet_scene)
@@ -835,7 +849,11 @@ struct grabbable_manager
                 if(g.parent_id != -1)
                     continue;
 
-                g.parent(bullet_scene, p.hand_id, g.get_quat(), p.hand_rot);
+                cl_float4 gpos = g.ctr->pos;
+
+                vec3f gfpos = {gpos.x, gpos.y, gpos.z};
+
+                g.parent(bullet_scene, p.hand_id, g.get_quat(), p.hand_rot, gfpos - pinch_pos);
             }
         }
 
