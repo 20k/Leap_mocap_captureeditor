@@ -141,7 +141,7 @@ void BasicExample::initPhysics()
 		btTransform startTransform;
 		startTransform.setIdentity();
 
-		btScalar	mass(10.f);
+		btScalar	mass(0.1f);
 
 		//rigidbody is dynamic if and only if mass is non zero, otherwise static
 		bool isDynamic = (mass != 0.f);

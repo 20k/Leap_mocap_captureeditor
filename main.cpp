@@ -1186,10 +1186,6 @@ int main(int argc, char *argv[])
 
 	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
 
-	sf::Clock physclock;
-
-	float phystime = 0.f;
-
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -1203,13 +1199,7 @@ int main(int argc, char *argv[])
                 window.window.close();
         }
 
-        phystime = physclock.getElapsedTime().asMicroseconds() / 1000.f / 1000.f;
-        physclock.restart();
-
-
-        example->stepSimulation(phystime);
-        //example->stepSimulation(window.get_frametime_ms() / 1000.f);
-
+        example->stepSimulation(window.get_frametime_ms() / 1000.f);
 
         example->tick();
         phys.tick();
