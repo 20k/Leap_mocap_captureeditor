@@ -67,7 +67,7 @@ struct leap_motion
     std::deque<std::map<uint32_t, LEAP_HAND>> hand_history;
     ///1/110 = 9ms
     ///9ms * 5 = 45ms delay of smoothing
-    int max_history = 5;
+    int max_history = 2;
 
     int64_t start_time_us = 0;
     int64_t current_time_offset_ms = 0;
@@ -265,7 +265,7 @@ struct leap_motion
         //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
         //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
-        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*2, pEvent, 99999);
+        eLeapRS res = LeapInterpolateFrame(connection, now, pEvent, 99999);
 
         if(res != eLeapRS_Success)
             printf("res %x\n", res);
@@ -768,6 +768,8 @@ struct grabbable
 
         time_elapsed_since_release_ms += ftime;
 
+        //printf("%f timeelapsed\n", time_elapsed_since_release_ms);
+
         if(frame_wait_restore > 0)
         {
             frame_wait_restore--;
@@ -818,6 +820,7 @@ struct grabbable_manager
         grabbables.push_back(g);
     }
 
+    ///if grabbed by multiple hands -> take the average
     void tick(float ftime)
     {
         std::vector<pinch> pinches = motion->get_pinches();
@@ -1225,7 +1228,7 @@ int main(int argc, char *argv[])
         example->stepSimulation(window.get_frametime_ms() / 1000.f);
 
         example->tick();
-        phys.tick();
+
 
         compute::event event;
 
@@ -1245,7 +1248,8 @@ int main(int argc, char *argv[])
 
         leap.tick();
         leap_object_spawner.tick();
-        grab_manager.tick(c.getElapsedTime().asMicroseconds() / 1000.f);
+        grab_manager.tick(window.get_frametime_ms());
+        phys.tick();
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 

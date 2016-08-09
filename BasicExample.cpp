@@ -119,7 +119,7 @@ void BasicExample::initPhysics()
 		btScalar mass(0.);
 		auto rigid = createRigidBody(mass,groundTransform,groundShape, btVector4(0,0,1,1));
 
-		rigid->setFriction(1.f);
+		rigid->setFriction(0.3f);
 
 		rigid_bodies.push_back(rigid);
 	}
@@ -165,7 +165,7 @@ void BasicExample::initPhysics()
 
 					btRigidBody* rigid = createRigidBody(mass,startTransform,colShape);
 
-					rigid->setFriction(1.f);
+					rigid->setFriction(3.f);
 					rigid->setRollingFriction(1.f);
 
                     rigid_bodies.push_back(rigid);
