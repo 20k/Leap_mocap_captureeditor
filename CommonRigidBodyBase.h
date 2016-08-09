@@ -53,8 +53,6 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 	btScalar m_oldPickingDist;
 	struct GUIHelperInterface* m_guiHelper;
 
-	float scale = 1.f;
-
 	CommonRigidBodyBase(struct GUIHelperInterface* helper)
 	:m_broadphase(0),
 		m_dispatcher(0),
@@ -76,18 +74,6 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		return m_dynamicsWorld;
 	}
 
-	void setScale(float _scale)
-	{
-	    scale = _scale;
-
-	    //m_dynamicsWorld->setGravity(btVector3(0, -10 * scale, 0));
-	}
-
-	void setScaleGravity(float _scale)
-	{
-        m_dynamicsWorld->setGravity(btVector3(0, -10 * scale * 10 * 10, 0));
-    }
-
 	virtual void createEmptyDynamicsWorld()
 	{
 		///collision configuration contains default setup for memory, collision setup
@@ -106,8 +92,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 
 		///It has been decided! 1 unit = 1mm
-		///we need to scale the world
-		m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
+		m_dynamicsWorld->setGravity(btVector3(0, -1000, 0));
 
 		m_dynamicsWorld->setInternalTickCallback(step_callback, &info);
 	}
@@ -117,7 +102,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 	{
 		if (m_dynamicsWorld)
 		{
-			m_dynamicsWorld->stepSimulation(deltaTime, 1, 1/120.f);
+			m_dynamicsWorld->stepSimulation(deltaTime, 1, 1/60.f);
 
 			printf("ftime %f\n", deltaTime);
 		}
@@ -520,44 +505,6 @@ struct CommonRigidBodyBase : public CommonExampleInterface
     void makeDisabled(btRigidBody* body)
     {
         body->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
-    }
-
-    btVector3 getScaledPos(btVector3 pos)
-    {
-        return pos * scale;
-    }
-
-    btVector3 getScaledPos(btRigidBody* body)
-    {
-        btTransform trans;
-
-        body->getMotionState()->getWorldTransform(trans);
-
-        return trans.getOrigin() * scale;
-    }
-
-    btTransform getScaledTransform(btRigidBody* body)
-    {
-        btTransform trans;
-
-        body->getMotionState()->getWorldTransform(trans);
-
-        btVector3 s = trans.getOrigin();
-
-        s = s * scale;
-
-        trans.setOrigin(s);
-
-        return trans;
-    }
-
-    void setScaledTransform(btRigidBody* body, btTransform trans)
-    {
-        btVector3 pos = trans.getOrigin();
-
-        trans.setOrigin(pos / scale);
-
-        body->getMotionState()->setWorldTransform(trans);
     }
 
     ///this is apparently more robust than tinkering with broadphase directly

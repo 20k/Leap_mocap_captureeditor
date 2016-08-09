@@ -569,14 +569,12 @@ struct grabbable
 
     uint32_t last_world_id = -1;
 
-    CommonRigidBodyBase* bullet_scene;
-
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
     int max_history = 8;
 
-    void init(objects_container* _ctr, btRigidBody* _rigid_body, CommonRigidBodyBase* _bullet_scene)
+    void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
         ctr = _ctr;
         rigid_body = _rigid_body;
@@ -584,8 +582,6 @@ struct grabbable
         b = get_bbox(ctr);
 
         base_diff = base_diff.identity();
-
-        bullet_scene = _bullet_scene;
     }
 
     bool inside(vec3f pos)
@@ -623,18 +619,13 @@ struct grabbable
 
     vec3f get_pos()
     {
-        //btTransform newTrans;
+        btTransform newTrans;
 
-        //rigid_body->getMotionState()->getWorldTransform(newTrans);
+        rigid_body->getMotionState()->getWorldTransform(newTrans);
 
-        //btVector3 bq = newTrans.getOrigin();
+        btVector3 bq = newTrans.getOrigin();
 
-        //return {bq.x(), bq.y(), bq.z()};
-
-
-        btVector3 pos = bullet_scene->getScaledPos(rigid_body);
-
-        return {pos.x(), pos.y(), pos.z()};
+        return {bq.x(), bq.y(), bq.z()};
     }
 
     quaternion get_quat()
@@ -661,14 +652,12 @@ struct grabbable
 
         btTransform newTrans;
 
-        //rigid_body->getMotionState()->getWorldTransform(newTrans);
+        rigid_body->getMotionState()->getWorldTransform(newTrans);
 
         newTrans.setOrigin(btVector3(pos.x, pos.y, pos.z));
         newTrans.setRotation(btQuaternion(n.x(), n.y(), n.z(), n.w()));
 
-        //rigid_body->getMotionState()->setWorldTransform(newTrans);
-
-        bullet_scene->setScaledTransform(rigid_body, newTrans);
+        rigid_body->getMotionState()->setWorldTransform(newTrans);
 
         ctr->set_pos(pos);
     }
@@ -810,7 +799,7 @@ struct grabbable_manager
             return;
 
         grabbable g;
-        g.init(ctr, rigid_body, bullet_scene);
+        g.init(ctr, rigid_body);
 
         grabbables.push_back(g);
     }
@@ -913,12 +902,8 @@ struct leap_object_manager
         motion = _motion;
         bullet_scene = _bullet_scene;
 
-        //scale = bullet_scene->scale;
-
-        float mscale = scale / bullet_scene->scale;
-
         start_transform.setIdentity();
-        cylinder = bullet_scene->createCylinderShape(btVector3(mscale, mscale, mscale));
+        cylinder = bullet_scene->createCylinderShape(btVector3(scale, scale, scale));
     }
 
     std::vector<leap_object> objects;
@@ -978,14 +963,10 @@ struct leap_object_manager
 
             btTransform newTrans;
 
-            btVector3 bone_pos = btVector3(bones[i].pos.v[0], bones[i].pos.v[1], bones[i].pos.v[2]);
-
-            newTrans.setOrigin(bone_pos);
+            newTrans.setOrigin(btVector3(bones[i].pos.v[0], bones[i].pos.v[1], bones[i].pos.v[2]));
             newTrans.setRotation(btQuat);
 
-            bullet_scene->setScaledTransform(objects[i].kinematic, newTrans);
-
-            //objects[i].kinematic->getMotionState()->setWorldTransform(newTrans);
+            objects[i].kinematic->getMotionState()->setWorldTransform(newTrans);
         }
 
         for(int i=bones.size(); i<objects.size(); i++)
@@ -1030,8 +1011,6 @@ struct physics_object_manager
             vec3f scale_3d = {diff.x(), diff.y(), diff.z()};
             scale_3d = scale_3d / 2.f;
 
-            scale_3d = scale_3d * bullet_scene->scale;
-
             //printf("%f scale\n", cur_scale);
 
             objects_container* ctr = context->make_new();
@@ -1062,11 +1041,7 @@ struct physics_object_manager
 
             body->getMotionState()->getWorldTransform(trans);
 
-            //vec3f pos = {trans.getOrigin().x(), trans.getOrigin().y(), trans.getOrigin().z()};
-
-            btVector3 bpos = bullet_scene->getScaledPos(body);
-
-            vec3f pos = {bpos.x(), bpos.y(), bpos.z()};
+            vec3f pos = {trans.getOrigin().x(), trans.getOrigin().y(), trans.getOrigin().z()};
 
             obj->set_pos(conv_implicit<cl_float4>(pos));
 
@@ -1201,9 +1176,7 @@ int main(int argc, char *argv[])
 	CommonExampleOptions options(&noGfx);
 	CommonRigidBodyBase*    example = BasicExampleCreateFunc(options);
 
-    example->setScale(1.f);
 	example->initPhysics();
-	example->setScaleGravity(1.f);
 
 
     grabbable_manager grab_manager;
@@ -1213,6 +1186,9 @@ int main(int argc, char *argv[])
 
 	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
 
+	sf::Clock physclock;
+
+	float phystime = 0.f;
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
@@ -1227,7 +1203,13 @@ int main(int argc, char *argv[])
                 window.window.close();
         }
 
-        example->stepSimulation(window.get_frametime_ms() / 1000.f);
+        phystime = physclock.getElapsedTime().asMicroseconds() / 1000.f / 1000.f;
+        physclock.restart();
+
+
+        example->stepSimulation(phystime);
+        //example->stepSimulation(window.get_frametime_ms() / 1000.f);
+
 
         example->tick();
         phys.tick();

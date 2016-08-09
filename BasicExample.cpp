@@ -103,7 +103,7 @@ void BasicExample::initPhysics()
 		m_dynamicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe+btIDebugDraw::DBG_DrawContactPoints);
 
 	///create a few basic rigid bodies
-	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(500/scale),btScalar(50./scale),btScalar(500/scale)));
+	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(500.),btScalar(50.),btScalar(500.)));
 
 
 	//groundShape->initializePolyhedralFeatures();
@@ -113,7 +113,7 @@ void BasicExample::initPhysics()
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,150/scale,0));
+	groundTransform.setOrigin(btVector3(0,150,0));
 
 	{
 		btScalar mass(0.);
@@ -129,10 +129,9 @@ void BasicExample::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		float fscale = 20.f / scale;
+		float scale = 20.f;
 
-		btBoxShape* colShape = createBoxShape(btVector3(fscale,fscale,fscale));
-		colShape->setMargin(0.004);
+		btBoxShape* colShape = createBoxShape(btVector3(scale,scale,scale));
 
 
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
@@ -142,7 +141,7 @@ void BasicExample::initPhysics()
 		btTransform startTransform;
 		startTransform.setIdentity();
 
-		btScalar	mass(0.1f);
+		btScalar	mass(10.f);
 
 		//rigidbody is dynamic if and only if mass is non zero, otherwise static
 		bool isDynamic = (mass != 0.f);
@@ -159,16 +158,15 @@ void BasicExample::initPhysics()
 				for(int j = 0;j<ARRAY_SIZE_Z;j++)
 				{
 					startTransform.setOrigin(btVector3(
-										btScalar(2.0*i*fscale),
-										btScalar(30*fscale+2.0*k*fscale),
-										btScalar(2.0*j*fscale)));
+										btScalar(2.0*i*scale),
+										btScalar(300+2.0*k*scale),
+										btScalar(2.0*j*scale)));
 
 
 					btRigidBody* rigid = createRigidBody(mass,startTransform,colShape);
 
 					rigid->setFriction(1.f);
 					rigid->setRollingFriction(1.f);
-					rigid->setSleepingThresholds(1/scale, 0.3f);
 
                     rigid_bodies.push_back(rigid);
 				}
