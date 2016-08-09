@@ -43,6 +43,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-std=gnu++14" />
+			<Add option="-Wno-narrowing" />
 			<Add option="-DNDEBUG" />
 			<Add option="-DGLEW_STATIC" />
 			<Add option="-DFLUID" />
@@ -50,6 +51,9 @@
 		</Compiler>
 		<Linker>
 			<Add option="-lmingw32" />
+			<Add option="-lBulletDynamics" />
+			<Add option="-lBulletCollision" />
+			<Add option="-lLinearMath" />
 			<Add option="-lsfml-graphics" />
 			<Add option="-lsfml-audio" />
 			<Add option="-lsfml-network" />
@@ -122,6 +126,8 @@
 		<Unit filename="../openclrenderer/vec.hpp" />
 		<Unit filename="../openclrenderer/vertex.cpp" />
 		<Unit filename="../openclrenderer/vertex.hpp" />
+		<Unit filename="BasicExample.cpp" />
+		<Unit filename="BasicExample.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
