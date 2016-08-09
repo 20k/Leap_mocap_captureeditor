@@ -912,6 +912,7 @@ struct leap_object
 
 ///kinematic bullet
 ///gotta smooth out the hands, they're too jittery to directly interact with bullet
+///I think hidden hands are still physics in the scene at 0,0,0
 struct leap_object_manager
 {
     object_context* context;
@@ -998,6 +999,16 @@ struct leap_object_manager
         for(int i=bones.size(); i<objects.size(); i++)
         {
             objects[i].ctr->hide();
+
+            cl_float4 pos = objects[i].ctr->pos;
+
+            btTransform newTrans;
+
+            objects[i].kinematic->getMotionState()->getWorldTransform(newTrans);
+
+            newTrans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+
+            objects[i].kinematic->getMotionState()->setWorldTransform(newTrans);
         }
     }
 };
