@@ -822,11 +822,13 @@ struct grabbable_manager
     {
         std::vector<pinch> pinches = motion->get_pinches();
 
-        float pinch_strength = 0.2f;
+        ///ok this needs to be hysteresis now, where we grab if > .8, but only let go if < 0.2
+        float pinch_strength_to_release = 0.2f;
+        float pinch_strength_to_grab = 0.8f;
 
         for(pinch& p : pinches)
         {
-            if(p.pinch_strength < pinch_strength)
+            if(p.pinch_strength < pinch_strength_to_release)
             {
                 for(grabbable& g : grabbables)
                 {
@@ -836,6 +838,9 @@ struct grabbable_manager
 
                 continue;
             }
+
+            if(p.pinch_strength < pinch_strength_to_grab)
+                continue;
 
             vec3f pinch_pos = p.pos;
 
