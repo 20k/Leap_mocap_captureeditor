@@ -6,6 +6,11 @@ struct positional
 {
     vec3f pos;
     quat rot;
+
+    ///0 -> 3
+    int bone_num = -1;
+    ///0 -> 4
+    int finger_num = -1;
 };
 
 struct finger : positional
@@ -380,6 +385,9 @@ struct leap_motion
                     q = transform_leap(q);
 
                     p.rot = q;
+
+                    p.bone_num = bb;
+                    p.finger_num = jj;
 
                     ret.push_back(p);
                 }
