@@ -516,6 +516,16 @@ struct CommonRigidBodyBase : public CommonExampleInterface
         m_dynamicsWorld->addRigidBody(body, group, collidesWithMask);
     }
 
+    void removeRigidBody(btRigidBody* body)
+    {
+        m_dynamicsWorld->removeRigidBody(body);
+    }
+
+    void addRigidBody(btRigidBody* body)
+    {
+        m_dynamicsWorld->addRigidBody(body);
+    }
+
     short getGroup(btRigidBody* body)
     {
         return body->getBroadphaseHandle()->m_collisionFilterGroup;
@@ -524,6 +534,21 @@ struct CommonRigidBodyBase : public CommonExampleInterface
     short getMask(btRigidBody* body)
     {
         return body->getBroadphaseHandle()->m_collisionFilterMask;
+    }
+
+    bool bodyInScene(btRigidBody* body)
+    {
+        btCollisionObject* utype = body;
+
+        for(int i=0; i<m_dynamicsWorld->getNumCollisionObjects(); i++)
+        {
+            btCollisionObject* obj = m_dynamicsWorld->getCollisionObjectArray()[i];
+
+            if(utype == obj)
+                return true;
+        }
+
+        return false;
     }
 
 

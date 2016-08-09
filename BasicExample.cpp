@@ -113,7 +113,7 @@ void BasicExample::initPhysics()
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,150,0));
+	groundTransform.setOrigin(btVector3(0,100,0));
 
 	{
 		btScalar mass(0.);
