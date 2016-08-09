@@ -85,7 +85,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
 	void setScaleGravity(float _scale)
 	{
-        m_dynamicsWorld->setGravity(btVector3(0, -10 * scale / 10000.f, 0));
+        m_dynamicsWorld->setGravity(btVector3(0, -10 * scale * 10 * 10, 0));
     }
 
 	virtual void createEmptyDynamicsWorld()

@@ -1201,9 +1201,9 @@ int main(int argc, char *argv[])
 	CommonExampleOptions options(&noGfx);
 	CommonRigidBodyBase*    example = BasicExampleCreateFunc(options);
 
-    example->setScale(1000.f);
+    example->setScale(1.f);
 	example->initPhysics();
-	example->setScaleGravity(1000.f);
+	example->setScaleGravity(1.f);
 
 
     grabbable_manager grab_manager;
