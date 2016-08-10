@@ -34,6 +34,8 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep);
 
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
+    std::vector<btRigidBody*> rigid_bodies;
+
     usr_world_info info;
 
 		//keep the collision shapes, for deletion/cleanup
@@ -551,6 +553,10 @@ struct CommonRigidBodyBase : public CommonExampleInterface
         return false;
     }
 
+    void insertIntoVector(btRigidBody* body)
+    {
+        rigid_bodies.push_back(body);
+    }
 
 	virtual void renderScene()
 	{

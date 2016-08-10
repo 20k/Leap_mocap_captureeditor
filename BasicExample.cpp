@@ -42,7 +42,6 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep)
 
 struct BasicExample : public CommonRigidBodyBase
 {
-    std::vector<btRigidBody*> rigid_bodies;
     //std::vector<btRigidBody*>
 
 	BasicExample(struct GUIHelperInterface* helper)

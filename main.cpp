@@ -162,6 +162,9 @@ int main(int argc, char *argv[])
 
 	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
 
+	hand_firer hand_fire;
+	hand_fire.init(&leap);
+
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -200,6 +203,38 @@ int main(int argc, char *argv[])
         leap_object_spawner.tick();
         grab_manager.tick(window.get_frametime_ms());
         phys.tick();
+        hand_fire.tick();
+
+        std::vector<pvec> positions = hand_fire.get_fire_positions();
+
+        for(int i=0; i<positions.size(); i++)
+        {
+            pvec pv = positions[i];
+
+            vec3f p = pv.pos;
+            vec3f d = pv.dir;
+
+            float vel = 5000.f;
+
+            printf("%f %f %f d\n", d.v[0], d.v[1], d.v[2]);
+
+            btTransform trans;
+
+            btQuaternion quat;
+            quat = quat.getIdentity();
+
+            trans.setRotation(quat);
+            trans.setOrigin({p.v[0], p.v[1], p.v[2]});
+
+            float scale = 20.f;
+
+            btBoxShape* colShape = example->createBoxShape(btVector3(scale,scale,scale));
+
+            btRigidBody* rigid = example->createRigidBody(0.1f, trans, colShape);
+            rigid->setLinearVelocity(btVector3(d.v[0], d.v[1], d.v[2]) * vel);
+
+            example->insertIntoVector(rigid);
+        }
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 

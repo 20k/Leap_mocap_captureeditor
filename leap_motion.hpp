@@ -449,6 +449,87 @@ struct leap_motion
         return ret;
     }
 
+    LEAP_HAND get_smoothed_hand_history(uint32_t id, int offset_from_size, int either_side = 2)
+    {
+        if(offset_from_size <= 0 || offset_from_size > hand_history.size())
+            return LEAP_HAND();
+
+        LEAP_HAND ret = hand_history[hand_history.size() - offset_from_size][id];
+
+        int num = 1;
+
+        for(int i=-either_side; i<=either_side; i++)
+        {
+            if(i == 0)
+                continue;
+
+            int offset = hand_history.size() - (i + offset_from_size);
+
+            if(offset < 0 || offset >= hand_history.size())
+                continue;
+
+            LEAP_HAND& h = hand_history[offset][id];
+
+            for(int ff = 0; ff < 5; ff++)
+            {
+                for(int bb = 0; bb < 4; bb++)
+                {
+                    LEAP_VECTOR vn = h.digits[ff].bones[bb].next_joint;
+                    LEAP_VECTOR vp = h.digits[ff].bones[bb].prev_joint;
+
+                    LEAP_VECTOR von = ret.digits[ff].bones[bb].next_joint;
+                    LEAP_VECTOR vop = ret.digits[ff].bones[bb].prev_joint;
+
+                    vec3f vns = {vn.v[0], vn.v[1], vn.v[2]};
+                    vec3f vps = {vp.v[0], vp.v[1], vp.v[2]};
+
+                    vec3f vons = {von.v[0], von.v[1], von.v[2]};
+                    vec3f vops = {vop.v[0], vop.v[1], vop.v[2]};
+
+                    vns += vons;
+                    vps += vops;
+
+                    ret.digits[ff].bones[bb].next_joint = {vns.v[0], vns.v[1], vns.v[2]};
+                    ret.digits[ff].bones[bb].prev_joint = {vps.v[0], vps.v[1], vps.v[2]};
+                }
+            }
+
+            num++;
+        }
+
+        for(int ff = 0; ff < 5; ff++)
+        {
+            for(int bb = 0; bb < 4; bb++)
+            {
+                LEAP_VECTOR von = ret.digits[ff].bones[bb].next_joint;
+                LEAP_VECTOR vop = ret.digits[ff].bones[bb].prev_joint;
+
+                vec3f vons = {von.v[0], von.v[1], von.v[2]};
+                vec3f vops = {vop.v[0], vop.v[1], vop.v[2]};
+
+                vons = vons / (float)num;
+                vops = vops / (float)num;
+
+                ret.digits[ff].bones[bb].next_joint = {vons.v[0], vons.v[1], vons.v[2]};
+                ret.digits[ff].bones[bb].prev_joint = {vops.v[0], vops.v[1], vops.v[2]};
+            }
+        }
+
+        return ret;
+    }
+
+    std::map<uint32_t, LEAP_HAND> get_smoothed_all_hands_history(int offset_from_size, int either_side = 2)
+    {
+        std::map<uint32_t, LEAP_HAND> ret;
+
+        for(auto& i : hand_map)
+        {
+            ret[i.first] = get_smoothed_hand_history(i.first, offset_from_size, either_side);
+        }
+
+        return ret;
+    }
+
     std::vector<pinch> get_pinches()
     {
         std::vector<pinch> ret;
