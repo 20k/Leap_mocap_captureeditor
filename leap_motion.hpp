@@ -53,7 +53,7 @@ struct leap_motion
     std::deque<std::map<uint32_t, LEAP_HAND>> hand_history;
     ///1/110 = 9ms
     ///9ms * 5 = 45ms delay of smoothing
-    int max_history = 2;
+    int max_history = 20;
 
     int64_t start_time_us = 0;
     int64_t current_time_offset_ms = 0;
@@ -405,7 +405,7 @@ struct leap_motion
        return hands_to_positional(hand_map);
     }
 
-    std::vector<positional> get_smoothed_positionals()
+    std::vector<positional> get_smoothed_positionals(int n = 8)
     {
         std::vector<positional> ret;
 
@@ -414,8 +414,11 @@ struct leap_motion
 
         int num = 0;
 
-        for(std::map<uint32_t, LEAP_HAND>& hand : hand_history)
+        //for(std::map<uint32_t, LEAP_HAND>& hand : hand_history)
+        for(int kk=hand_history.size()-1; kk >= 0; kk--)
         {
+            std::map<uint32_t, LEAP_HAND>& hand = hand_history[kk];
+
             std::vector<positional> this_hand = hands_to_positional(hand);
 
             if(this_hand.size() != ret.size())
@@ -433,6 +436,9 @@ struct leap_motion
             }
 
             num++;
+
+            if(num >= n)
+                break;
         }
 
         for(auto& i : ret)

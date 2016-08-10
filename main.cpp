@@ -28,6 +28,7 @@
 #include "leap_object_manager.hpp"
 #include "grabbables.hpp"
 #include "physics_object_manager.hpp"
+#include "hand_firer.hpp"
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)

@@ -128,7 +128,12 @@
 		<Unit filename="../openclrenderer/vertex.hpp" />
 		<Unit filename="BasicExample.cpp" />
 		<Unit filename="BasicExample.h" />
+		<Unit filename="bbox.hpp" />
+		<Unit filename="grabbables.hpp" />
+		<Unit filename="leap_motion.hpp" />
+		<Unit filename="leap_object_manager.hpp" />
 		<Unit filename="main.cpp" />
+		<Unit filename="physics_object_manager.hpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />
