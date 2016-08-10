@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
 
             float vel = 5000.f;
 
-            printf("%f %f %f d\n", d.v[0], d.v[1], d.v[2]);
+            //printf("%f %f %f d\n", d.v[0], d.v[1], d.v[2]);
 
             btTransform trans;
 
@@ -247,6 +247,7 @@ int main(int argc, char *argv[])
         window.render_block();
 
         context.build_tick();
+        context.flip();
         context.flush_locations();
 
         avg_ftime += c.getElapsedTime().asMicroseconds();

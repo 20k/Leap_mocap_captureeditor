@@ -100,7 +100,9 @@ struct hand_firer
 
             //vec3f pos = (d1 + d2)/2.f;
 
-            if(angle > M_PI/16)
+            bool primary_extended = h1.index.is_extended;
+
+            if(angle > M_PI/8 && primary_extended)
             {
                 hand_state.pos = d2 + offset;
                 hand_state.dir = (d1 - ds).norm();
