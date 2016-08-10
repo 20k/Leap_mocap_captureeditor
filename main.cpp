@@ -66,9 +66,7 @@
     }
 }*/
 
-///gamma correct mipmap filtering
-///7ish pre tile deferred
-///try first bounce in SS, then go to global if fail
+///move light down and to the side for specular
 int main(int argc, char *argv[])
 {
     lg::set_logfile("./logging.txt");

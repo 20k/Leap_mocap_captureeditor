@@ -52,6 +52,9 @@ struct leap_object_manager
 
     void tick()
     {
+        ///hand_history not interpolated, but hand_map is
+        ///this may cause some of the jitteryness. Try experimenting with this
+        ///turns out its prolly not that, although its more responsive
         std::vector<positional> bones = motion->get_smoothed_positionals();
 
         for(int i=objects.size(); i<bones.size(); i++)
