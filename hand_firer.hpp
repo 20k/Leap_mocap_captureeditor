@@ -58,8 +58,8 @@ struct hand_firer
         //std::map<uint32_t, LEAP_HAND>& latest = motion->hand_history[motion->hand_history.size()-1];
         //std::map<uint32_t, LEAP_HAND>& earliest = motion->hand_history[motion->hand_history.size()-frame_history];
 
-        auto latest = motion->get_smoothed_all_hands_history(1, 4);
-        auto earliest = motion->get_smoothed_all_hands_history(frame_history, 4);
+        auto latest = motion->get_smoothed_all_hands_history(1, 2);
+        auto earliest = motion->get_smoothed_all_hands_history(frame_history, 2);
 
         std::vector<uint32_t> ids;
 
@@ -88,8 +88,8 @@ struct hand_firer
 
             LEAP_VECTOR l1 = h1.index.bones[3].prev_joint;
             LEAP_VECTOR l2 = h1.index.bones[3].next_joint;
-            LEAP_VECTOR ls = h1.index.bones[0].prev_joint;
-            LEAP_VECTOR le = h1.index.bones[0].next_joint;
+            LEAP_VECTOR ls = h1.index.bones[1].prev_joint;
+            LEAP_VECTOR le = h1.index.bones[1].next_joint;
 
             vec3f d1 = {l1.x, l1.y, -l1.z};
             vec3f d2 = {l2.x, l2.y, -l2.z};
@@ -112,7 +112,8 @@ struct hand_firer
             if(angle > M_PI/8 && primary_extended && !others_extended)
             {
                 hand_state.pos = d2 + offset;
-                hand_state.dir = (d1 - ds).norm();
+                hand_state.dir = (de - ds).norm();
+                //hand_state.dir = (d1 - ds).norm();
 
                 if(!hand_state.fired)
                 {
