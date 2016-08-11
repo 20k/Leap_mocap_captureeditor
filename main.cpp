@@ -126,9 +126,13 @@ int main(int argc, char *argv[])
     light l;
     l.set_col((cl_float4){1.0f, 1.0f, 1.0f, 0.0f});
     l.set_shadow_casting(0);
-    l.set_brightness(1);
+    l.set_brightness(0.5f);
     l.radius = 100000;
-    l.set_pos((cl_float4){-200, 1000, -100, 0});
+    l.set_pos((cl_float4){-400, 300, -100, 0});
+
+    light::add_light(&l);
+
+    l.set_pos({0, 1000, 0});
 
     light::add_light(&l);
 
