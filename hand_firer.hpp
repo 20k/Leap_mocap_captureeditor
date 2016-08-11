@@ -102,7 +102,14 @@ struct hand_firer
 
             bool primary_extended = h1.index.is_extended;
 
-            if(angle > M_PI/8 && primary_extended)
+            bool others_extended = false;
+
+            for(int i=2; i<5; i++)
+            {
+                others_extended |= h1.digits[i].is_extended;
+            }
+
+            if(angle > M_PI/8 && primary_extended && !others_extended)
             {
                 hand_state.pos = d2 + offset;
                 hand_state.dir = (d1 - ds).norm();

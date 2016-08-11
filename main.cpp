@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
 
         window.render_block();
 
-        context.build_tick();
+        context.build_tick(true);
         context.flip();
         context.flush_locations();
 
