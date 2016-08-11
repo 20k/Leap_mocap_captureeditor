@@ -24,7 +24,7 @@ struct hand_firer
     leap_motion* motion;
 
     ///leap motion frames
-    int frame_history = 15;
+    int frame_history = 4;
 
     bool in_fire_state = false;
 
@@ -58,8 +58,8 @@ struct hand_firer
         //std::map<uint32_t, LEAP_HAND>& latest = motion->hand_history[motion->hand_history.size()-1];
         //std::map<uint32_t, LEAP_HAND>& earliest = motion->hand_history[motion->hand_history.size()-frame_history];
 
-        auto latest = motion->get_smoothed_all_hands_history(1, 2);
-        auto earliest = motion->get_smoothed_all_hands_history(frame_history, 2);
+        auto latest = motion->get_smoothed_all_hands_history(1, 1);
+        auto earliest = motion->get_smoothed_all_hands_history(frame_history, 1);
 
         std::vector<uint32_t> ids;
 
@@ -98,6 +98,14 @@ struct hand_firer
 
             vec3f offset = (de - ds).norm() * 100;
 
+            vec3f avg_pos = (ds + de)/2.f;
+
+            quaternion rquat = convert_from_leap_quaternion(h1.index.bones[1].rotation);
+
+            mat3f fquat = rquat.get_rotation_matrix();
+
+            vec3f dir = fquat * (vec3f){0, 0, 1};
+
             //vec3f pos = (d1 + d2)/2.f;
 
             bool primary_extended = h1.index.is_extended;
@@ -112,7 +120,8 @@ struct hand_firer
             if(angle > M_PI/8 && primary_extended && !others_extended)
             {
                 hand_state.pos = d2 + offset;
-                hand_state.dir = (de - ds).norm();
+                hand_state.dir = dir.norm();
+                //hand_state.dir = (de - ds).norm();
                 //hand_state.dir = (d1 - ds).norm();
 
                 if(!hand_state.fired)
