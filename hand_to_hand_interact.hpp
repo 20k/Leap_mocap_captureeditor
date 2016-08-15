@@ -162,6 +162,11 @@ struct hand_to_hand_interactor
         }
     }
 
+    int get_num_from_len(float len)
+    {
+        return floor(len / (cylinder_length + cylinder_separation)) - 1.f;
+    }
+
     ///I guess keep ticking until we try to grab it? we just want to
     ///disable the extension mechanic if we're not pinching
     ///wrong terminate should do nothing, except wiat for a enw pinch to spawn the object
@@ -201,9 +206,9 @@ struct hand_to_hand_interactor
 
         base_pos = base_pos + dir.norm() * (cylinder_length + cylinder_separation);
 
-        int n = ceil(len / (cylinder_length + cylinder_separation)) - 1.f;
+        int n = get_num_from_len(len);
 
-        if(n <= 0)
+        if(n < 0)
             return;
 
         for(int i=s.objs.size(); i <= n; i++)
@@ -239,7 +244,7 @@ struct hand_to_hand_interactor
 
     void tick_finished(finished_slide& fs)
     {
-        int n = ceil(fs.len / (cylinder_length + cylinder_separation)) - 1.f;
+        int n = get_num_from_len(fs.len);
 
         if(n <= 0)
             return;
@@ -329,7 +334,7 @@ struct hand_to_hand_interactor
         fs.objs = std::move(s.objs);
         fs.len = s.saved_len;
 
-        int n = ceil(fs.len / (cylinder_length + cylinder_separation)) - 1.f;
+        int n = get_num_from_len(fs.len);
 
         float real_len = n * (cylinder_length + cylinder_separation) - cylinder_separation;
 
@@ -352,6 +357,8 @@ struct hand_to_hand_interactor
         hand_to_finger_is_extended[fs.reference_hand_id] = true;
 
         finished.push_back(fs);
+
+        lg::log("End of slide terminated");
 
         ///push to finished slide queue
         ///convert objects to regular old rigid body
