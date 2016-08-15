@@ -36,6 +36,7 @@ struct hand_to_hand_interactor
     struct finished_slide
     {
         int reference_hand_id = -1;
+        int grabber_hand_id = -1;
         float len = 0;
         grabbable* g = nullptr;
         bool suppress = false;
@@ -169,9 +170,11 @@ struct hand_to_hand_interactor
         {
             finished_slide& fs = finished[i];
 
-            if(fs.g->is_grabbed() && !fs.suppress)
+            if(fs.g->is_grabbed() && !fs.suppress && fs.g->parent_id != fs.reference_hand_id)
             {
                 lg::log("HO HO");
+
+                hand_to_finger_is_extended[fs.reference_hand_id] = false;
 
                 objects_container* base = context->make_new();
                 base->isloaded = true;
@@ -383,6 +386,8 @@ struct hand_to_hand_interactor
 
         body->getMotionState()->setWorldTransform(trans);
 
+        fs.g->make_kinematic(bullet_scene);
+
         //printf("T %f %f %f\n", EXPAND_3(avg_pos));
     }
 
@@ -422,6 +427,7 @@ struct hand_to_hand_interactor
 
         finished_slide fs;
         fs.reference_hand_id = s.reference_hand_id;
+        fs.grabber_hand_id = s.grabber_hand_id;
         fs.objs = std::move(s.objs);
         fs.len = s.saved_len;
 
