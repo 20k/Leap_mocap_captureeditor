@@ -221,7 +221,7 @@ struct hand_to_hand_interactor
                 }
 
                 base->set_pos(conv_implicit<cl_float4>(avg));
-                base->set_rot_quat({{0, 0, 0, 1}});
+                base->set_rot_quat(world_rot);
 
                 fs.g->is_kinematic = true;
                 fs.g->set_self_owned();
