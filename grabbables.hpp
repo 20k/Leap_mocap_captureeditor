@@ -31,6 +31,8 @@ struct grabbable
 
     vec3f offset = {0,0,0};
 
+    bool is_parented = false;
+
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
@@ -41,13 +43,41 @@ struct grabbable
         ctr = _ctr;
         rigid_body = _rigid_body;
 
-        b = get_bbox(ctr);
+        //if(ctr)
+        //    b = get_bbox(ctr);
+        //else
+        {
+            btVector3 bmin;
+            btVector3 bmax;
+
+            btTransform none;
+            none.setOrigin(btVector3(0,0,0));
+            none.setRotation(btQuaternion().getIdentity());
+
+            rigid_body->getCollisionShape()->getAabb(none, bmin, bmax);
+
+            b.min = {bmin.x(), bmin.y(), bmin.z()};
+            b.max = {bmax.x(), bmax.y(), bmax.z()};
+        }
 
         base_diff = base_diff.identity();
     }
 
     bool inside(vec3f pos)
     {
+        if(ctr == nullptr)
+        {
+            btTransform trans;
+
+            rigid_body->getMotionState()->getWorldTransform(trans);
+
+            btVector3 bpos = trans.getOrigin();
+
+            vec3f v = {bpos.x(), bpos.y(), bpos.z()};
+
+            return within(b, pos - v);
+        }
+
         vec3f my_pos = xyz_to_vec(ctr->pos);
 
         return within(b, pos - my_pos);
@@ -68,6 +98,8 @@ struct grabbable
 
         offset = hand_rot.transp() * position_offset;
 
+        is_parented = true;
+
         //printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
     }
 
@@ -81,6 +113,8 @@ struct grabbable
         time_elapsed_since_release_ms = 0;
 
         make_dynamic(bullet_scene);
+
+        is_parented = false;
     }
 
     vec3f get_pos()
@@ -133,7 +167,8 @@ struct grabbable
 
         rigid_body->getMotionState()->setWorldTransform(newTrans);
 
-        ctr->set_pos(conv_implicit<cl_float4>(pos));
+        if(ctr)
+            ctr->set_pos(conv_implicit<cl_float4>(pos));
     }
 
     void make_dynamic(CommonRigidBodyBase* bullet_scene)
@@ -253,6 +288,11 @@ struct grabbable
         last_ftime = ftime;
         last_world_id = bullet_scene->info.internal_step_id;
     }
+
+    bool is_grabbed()
+    {
+        return is_parented;
+    }
 };
 
 struct grab_info
@@ -274,7 +314,7 @@ struct by_id
 ///then disable collisions for the fingertips when we're above a threshold
 struct grabbable_manager
 {
-    std::vector<grabbable> grabbables;
+    std::vector<grabbable*> grabbables;
     leap_motion* motion;
     CommonRigidBodyBase* bullet_scene;
     leap_object_manager* leap_object_manage;
@@ -286,15 +326,17 @@ struct grabbable_manager
         leap_object_manage = _leap_object_manage;
     }
 
-    void add(objects_container* ctr, btRigidBody* rigid_body)
+    grabbable* add(objects_container* ctr, btRigidBody* rigid_body, bool override_kinematic = false)
     {
-        if(rigid_body->isStaticOrKinematicObject())
-            return;
+        if(rigid_body->isStaticOrKinematicObject() && !override_kinematic)
+            return nullptr;
 
-        grabbable g;
-        g.init(ctr, rigid_body);
+        grabbable* g = new grabbable;
+        g->init(ctr, rigid_body);
 
         grabbables.push_back(g);
+
+        return g;
     }
 
     ///if grabbed by multiple hands -> take the average
@@ -311,10 +353,10 @@ struct grabbable_manager
         {
             if(p.pinch_strength < pinch_strength_to_release)
             {
-                for(grabbable& g : grabbables)
+                for(grabbable* g : grabbables)
                 {
-                    if(p.hand_id == g.parent_id)
-                        g.unparent(bullet_scene);
+                    if(p.hand_id == g->parent_id)
+                        g->unparent(bullet_scene);
                 }
 
                 continue;
@@ -352,21 +394,21 @@ struct grabbable_manager
 
             vec3f pinch_pos = p.pos;
 
-            for(grabbable& g : grabbables)
+            for(grabbable* g : grabbables)
             {
-                bool within = g.inside(pinch_pos);
+                bool within = g->inside(pinch_pos);
 
                 if(!within)
                     continue;
 
-                if(g.parent_id != -1)
+                if(g->parent_id != -1)
                     continue;
 
-                cl_float4 gpos = g.ctr->pos;
+                cl_float4 gpos = g->ctr->pos;
 
                 vec3f gfpos = {gpos.x, gpos.y, gpos.z};
 
-                g.parent(bullet_scene, p.hand_id, g.get_quat(), p.hand_rot, gfpos - pinch_pos);
+                g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - pinch_pos);
             }
         }
 
@@ -375,30 +417,30 @@ struct grabbable_manager
         ///but if down the bottom it works in tick
         ///but not overall
         ///this works for some reason now, something funky is going on with bullet kinematics
-        for(grabbable& g : grabbables)
+        for(grabbable* g : grabbables)
         {
-            g.tick(ftime, bullet_scene);
+            g->tick(ftime, bullet_scene);
         }
 
-        for(grabbable& g : grabbables)
+        for(grabbable* g : grabbables)
         {
-            if(g.parent_id == -1)
+            if(g->parent_id == -1)
                 continue;
 
             bool unparent = true;
 
             for(pinch& p : pinches)
             {
-                if(p.hand_id == g.parent_id)
+                if(p.hand_id == g->parent_id)
                 {
-                    g.set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
+                    g->set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
 
                     unparent = false;
                 }
             }
 
             if(unparent)
-                g.unparent(bullet_scene);
+                g->unparent(bullet_scene);
         }
     }
 

@@ -7,30 +7,42 @@ struct hand_to_hand_interactor
     grabbable_manager* grab_manage;
     leap_motion* motion;
     object_context* context;
+    CommonRigidBodyBase* bullet_scene;
 
-    void init(leap_object_manager* _leap_object_manage, grabbable_manager* _grab_manage, leap_motion* _motion, object_context* _context)
+    float scale = 10.f;
+
+    float cylinder_length = scale * 2;
+
+    float cylinder_separation = cylinder_length / 4;
+
+    void init(leap_object_manager* _leap_object_manage, grabbable_manager* _grab_manage, leap_motion* _motion, object_context* _context, CommonRigidBodyBase* _bullet_scene)
     {
         leap_object_manage = _leap_object_manage;
         grab_manage = _grab_manage;
         motion = _motion;
         context = _context;
+        bullet_scene = _bullet_scene;
     }
 
     struct slide_in_progress
     {
         int reference_hand_id = -1;
         int grabber_hand_id = -1;
+        float saved_len = 0;
 
         std::vector<objects_container*> objs;
     };
 
     struct finished_slide
     {
-        btRigidBody* body;
+        int reference_hand_id = -1;
+        float len = 0;
+        grabbable* g = nullptr;
 
         std::vector<objects_container*> objs;
     };
 
+    std::map<int, bool> hand_to_finger_is_extended;
     std::vector<slide_in_progress> slides;
     std::vector<finished_slide> finished;
 
@@ -73,6 +85,9 @@ struct hand_to_hand_interactor
 
                 ///we grabbed ourself
                 if(p.hand_id == lobj->current_positional.hand_id)
+                    continue;
+
+                if(hand_to_finger_is_extended[lobj->current_positional.hand_id])
                     continue;
 
                 ///we've grabbed the tip of our first finger
@@ -140,16 +155,18 @@ struct hand_to_hand_interactor
         {
             tick_slide(i);
         }
+
+        for(auto& i : finished)
+        {
+            tick_finished(i);
+        }
     }
 
+    ///I guess keep ticking until we try to grab it? we just want to
+    ///disable the extension mechanic if we're not pinching
+    ///wrong terminate should do nothing, except wiat for a enw pinch to spawn the object
     void tick_slide(slide_in_progress& s)
     {
-        float scale = 10.f;
-
-        float cylinder_length = scale * 2;
-
-        float cylinder_separation = cylinder_length / 4;
-
         std::vector<leap_object> objects = leap_object_manage->get_objects();
 
         leap_object* base_obj = nullptr;
@@ -177,6 +194,8 @@ struct hand_to_hand_interactor
         vec3f ddir = (grab_pos - base_pos);
 
         float len = ddir.length();
+
+        s.saved_len = len;
 
         vec3f dir = base_rot * (vec3f){0, 0, 1};
 
@@ -218,9 +237,121 @@ struct hand_to_hand_interactor
         }
     }
 
+    void tick_finished(finished_slide& fs)
+    {
+        int n = ceil(fs.len / (cylinder_length + cylinder_separation)) - 1.f;
+
+        if(n <= 0)
+            return;
+
+        std::vector<leap_object> objects = leap_object_manage->get_objects();
+
+        leap_object* base_obj = nullptr;
+
+        for(leap_object& obj : objects)
+        {
+            if(obj.current_positional.hand_id == fs.reference_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
+                base_obj = &obj;
+        }
+
+        if(base_obj == nullptr)
+            return;
+
+        vec3f base_pos = xyz_to_vec(base_obj->ctr->pos);
+
+        quaternion base_rot_quat = base_obj->ctr->rot_quat;
+
+        mat3f base_rot = base_rot_quat.get_rotation_matrix();
+
+        vec3f dir = base_rot * (vec3f){0, 0, 1};
+
+        base_pos = base_pos + dir.norm() * (cylinder_length + cylinder_separation);
+
+        for(int i=0; i<n; i++)
+        {
+            objects_container* ctr = fs.objs[i];
+
+            ctr->set_pos({base_pos.v[0], base_pos.v[1], base_pos.v[2]});
+            ctr->set_rot_quat(base_obj->ctr->rot_quat);
+
+            base_pos = base_pos + dir.norm() * (cylinder_length + cylinder_separation);
+        }
+
+        vec3f avg_pos = get_avg_pos(fs.objs, n);
+
+        btRigidBody* body = fs.g->rigid_body;
+
+        btTransform trans;
+        trans.setOrigin(btVector3(avg_pos.v[0], avg_pos.v[1], avg_pos.v[2]));
+        trans.setRotation(btQuaternion(base_rot_quat.x(), base_rot_quat.y(), base_rot_quat.z(), base_rot_quat.w()));
+
+        body->getMotionState()->setWorldTransform(trans);
+
+        //printf("T %f %f %f\n", EXPAND_3(avg_pos));
+    }
+
+    vec3f get_avg_pos(const std::vector<objects_container*>& ctr, int nmax = INT_MAX)
+    {
+        if(ctr.size() == 0 || nmax == 0)
+            return {0,0,0};
+
+        vec3f avg = {0,0,0};
+
+        int num = std::min((int)ctr.size(), nmax);
+
+        for(int i=0; i<ctr.size() && i < nmax; i++)
+        {
+            avg = avg + xyz_to_vec(ctr[i]->pos);
+        }
+
+        return avg / num;
+    }
+
     void terminate_slide(slide_in_progress& s)
     {
         lg::log("Slide terminated");
+
+        std::vector<leap_object> objects = leap_object_manage->get_objects();
+
+        leap_object* base_obj = nullptr;
+
+        for(leap_object& obj : objects)
+        {
+            if(obj.current_positional.hand_id == s.reference_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
+                base_obj = &obj;
+        }
+
+        if(base_obj == nullptr)
+            return;
+
+        finished_slide fs;
+        fs.reference_hand_id = s.reference_hand_id;
+        fs.objs = std::move(s.objs);
+        fs.len = s.saved_len;
+
+        int n = ceil(fs.len / (cylinder_length + cylinder_separation)) - 1.f;
+
+        float real_len = n * (cylinder_length + cylinder_separation) - cylinder_separation;
+
+        ///z forward reference
+        btBoxShape* box = bullet_scene->createBoxShape(btVector3(scale, scale, real_len/2));
+
+        vec3f center = get_avg_pos(fs.objs, n);
+        quaternion rot_quat = base_obj->ctr->rot_quat;
+
+        btTransform start;
+        start.setOrigin(btVector3(center.x(), center.y(), center.z()));
+        start.setRotation(btQuaternion(rot_quat.x(), rot_quat.y(), rot_quat.z(), rot_quat.w()));
+
+        btRigidBody* body = bullet_scene->createRigidBody(1.f * n, start, box);
+
+        bullet_scene->makeKinematic(body);
+
+        fs.g = grab_manage->add(nullptr, body, true);
+
+        hand_to_finger_is_extended[fs.reference_hand_id] = true;
+
+        finished.push_back(fs);
 
         ///push to finished slide queue
         ///convert objects to regular old rigid body

@@ -172,8 +172,9 @@ int main(int argc, char *argv[])
 	hand_firer hand_fire;
 	hand_fire.init(&leap);
 
+	///dependencies are getting ridiculous, just pass a state between them?
 	hand_to_hand_interactor hand_to_hand;
-	hand_to_hand.init(&leap_object_spawner, &grab_manager, &leap, &context);
+	hand_to_hand.init(&leap_object_spawner, &grab_manager, &leap, &context, example);
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
@@ -188,6 +189,9 @@ int main(int argc, char *argv[])
                 window.window.close();
         }
 
+        example->stepSimulation(window.get_frametime_ms() / 1000.f);
+
+        example->tick();
 
         compute::event event;
 
@@ -204,12 +208,6 @@ int main(int argc, char *argv[])
 
             context.fetch()->swap_depth_buffers();
         }
-
-
-        example->stepSimulation(window.get_frametime_ms() / 1000.f);
-
-        example->tick();
-
 
         leap.tick();
         leap_object_spawner.tick();
