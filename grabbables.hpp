@@ -65,6 +65,8 @@ struct grabbable
 
     bool inside(vec3f pos)
     {
+        mat3f rot;
+
         if(ctr == nullptr)
         {
             btTransform trans;
@@ -72,15 +74,24 @@ struct grabbable
             rigid_body->getMotionState()->getWorldTransform(trans);
 
             btVector3 bpos = trans.getOrigin();
+            btQuaternion bq = trans.getRotation();
+
+            quaternion q = {{bq.x(), bq.y(), bq.z(), bq.w()}};
+
+            rot = q.get_rotation_matrix();
 
             vec3f v = {bpos.x(), bpos.y(), bpos.z()};
 
-            return within(b, pos - v);
+            vec3f rel = pos - v;
+
+            return within(b, rot.transp() * rel);
         }
+
+        rot = ctr->rot_quat.get_rotation_matrix();
 
         vec3f my_pos = xyz_to_vec(ctr->pos);
 
-        return within(b, pos - my_pos);
+        return within(b, rot.transp() * (pos - my_pos));
     }
 
     ///grabbed
