@@ -216,6 +216,7 @@ int main(int argc, char *argv[])
         hand_fire.tick();
         hand_to_hand.tick();
 
+
         std::vector<pvec> positions = hand_fire.get_fire_positions();
 
         for(int i=0; i<positions.size(); i++)
@@ -247,6 +248,10 @@ int main(int argc, char *argv[])
             example->insertIntoVector(rigid);
         }
 
+        context.build_tick(true);
+        context.flip();
+        context.flush_locations();
+
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 
         window.set_render_event(event);
@@ -257,15 +262,11 @@ int main(int argc, char *argv[])
 
         window.render_block();
 
-        context.build_tick(true);
-        context.flip();
-        context.flush_locations();
-
         avg_ftime += c.getElapsedTime().asMicroseconds();
 
         avg_ftime /= 2;
 
-        if(key.isKeyPressed(sf::Keyboard::M))
+        //if(key.isKeyPressed(sf::Keyboard::M))
             std::cout << c.getElapsedTime().asMicroseconds() << std::endl;
 
         if(key.isKeyPressed(sf::Keyboard::Comma))
