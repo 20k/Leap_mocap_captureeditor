@@ -172,6 +172,9 @@ int main(int argc, char *argv[])
 	hand_firer hand_fire;
 	hand_fire.init(&leap);
 
+	hand_to_hand_interactor hand_to_hand;
+	hand_to_hand.init(&leap_object_spawner, &grab_manager, &leap, &context);
+
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -184,10 +187,6 @@ int main(int argc, char *argv[])
             if(Event.type == sf::Event::Closed)
                 window.window.close();
         }
-
-        example->stepSimulation(window.get_frametime_ms() / 1000.f);
-
-        example->tick();
 
 
         compute::event event;
@@ -206,11 +205,18 @@ int main(int argc, char *argv[])
             context.fetch()->swap_depth_buffers();
         }
 
+
+        example->stepSimulation(window.get_frametime_ms() / 1000.f);
+
+        example->tick();
+
+
         leap.tick();
         leap_object_spawner.tick();
         grab_manager.tick(window.get_frametime_ms());
         phys.tick();
         hand_fire.tick();
+        hand_to_hand.tick();
 
         std::vector<pvec> positions = hand_fire.get_fire_positions();
 

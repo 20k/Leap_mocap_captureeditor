@@ -402,7 +402,7 @@ struct grabbable_manager
         }
     }
 
-    std::map<pinch, std::vector<btRigidBody*>, by_id> get_all_pinches(const std::vector<btRigidBody*>& check_bodies, float pinch_threshold)
+    std::map<pinch, std::vector<btRigidBody*>, by_id> get_all_pinched(const std::vector<btRigidBody*>& check_bodies, float pinch_threshold)
     {
         std::vector<pinch> pinches = motion->get_pinches();
 
@@ -425,6 +425,12 @@ struct grabbable_manager
                 btScalar radius;
 
                 col->getBoundingSphere(center, radius);
+
+                btTransform trans;
+
+                body->getMotionState()->getWorldTransform(trans);
+
+                center = center + trans.getOrigin();
 
                 vec3f cen = {center.x(), center.y(), center.z()};
 
