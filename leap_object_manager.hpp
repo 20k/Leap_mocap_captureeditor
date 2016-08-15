@@ -145,6 +145,11 @@ struct leap_object_manager
             bullet_scene->removeRigidBody(objects[i].kinematic);
         }
     }
+
+    std::vector<leap_object> get_objects()
+    {
+        return objects;
+    }
 };
 
 

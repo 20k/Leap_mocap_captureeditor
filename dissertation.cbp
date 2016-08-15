@@ -130,6 +130,7 @@
 		<Unit filename="BasicExample.h" />
 		<Unit filename="bbox.hpp" />
 		<Unit filename="grabbables.hpp" />
+		<Unit filename="hand_firer.hpp" />
 		<Unit filename="leap_motion.hpp" />
 		<Unit filename="leap_object_manager.hpp" />
 		<Unit filename="main.cpp" />

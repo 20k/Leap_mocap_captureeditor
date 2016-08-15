@@ -255,6 +255,19 @@ struct grabbable
     }
 };
 
+struct grab_info
+{
+    std::map<pinch, std::vector<grabbable>> pinches_grabbed;
+};
+
+struct by_id
+{
+    bool operator()(const pinch& lhs, const pinch& rhs) const
+    {
+        return lhs.hand_id < rhs.hand_id;
+    }
+};
+
 ///need to disable finger -> collider collisions for x seconds after launch
 ///may be easier to simply disable whole collider -> hand collisions
 ///need to pass in leap motion object manager, give the leap object class knowledge of which fingerbone it is
@@ -361,6 +374,7 @@ struct grabbable_manager
         ///but no in tick
         ///but if down the bottom it works in tick
         ///but not overall
+        ///this works for some reason now, something funky is going on with bullet kinematics
         for(grabbable& g : grabbables)
         {
             g.tick(ftime, bullet_scene);
@@ -386,7 +400,43 @@ struct grabbable_manager
             if(unparent)
                 g.unparent(bullet_scene);
         }
+    }
 
+    std::map<pinch, std::vector<btRigidBody*>, by_id> get_all_pinches(const std::vector<btRigidBody*>& check_bodies, float pinch_threshold)
+    {
+        std::vector<pinch> pinches = motion->get_pinches();
+
+        std::map<pinch, std::vector<btRigidBody*>, by_id> ret;
+
+        for(pinch& i : pinches)
+        {
+            float pinch_strength = i.pinch_strength;
+
+            if(pinch_strength < pinch_threshold)
+                continue;
+
+            vec3f pos = i.pos;
+
+            for(btRigidBody* body : check_bodies)
+            {
+                btCollisionShape* col = body->getCollisionShape();
+
+                btVector3 center;
+                btScalar radius;
+
+                col->getBoundingSphere(center, radius);
+
+                vec3f cen = {center.x(), center.y(), center.z()};
+
+                if((cen - pos).length() > radius)
+                    continue;
+
+                ///we're a match! Hooray!
+                ret[i].push_back(body);
+            }
+        }
+
+        return ret;
     }
 };
 

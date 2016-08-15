@@ -29,6 +29,7 @@
 #include "grabbables.hpp"
 #include "physics_object_manager.hpp"
 #include "hand_firer.hpp"
+#include "hand_to_hand_interact.hpp"
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -68,6 +69,8 @@
 }*/
 
 ///move light down and to the side for specular
+///2 hands -> shotgun <-- second
+///turn stretched finger into pole <-- first
 int main(int argc, char *argv[])
 {
     lg::set_logfile("./logging.txt");
