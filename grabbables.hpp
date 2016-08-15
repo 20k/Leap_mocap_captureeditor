@@ -10,6 +10,7 @@ struct grabbable
     btRigidBody* rigid_body = nullptr;
     int parent_id = -1;
     quaternion base_diff;
+    bool self_owned = false;
 
     bool should_hand_collide = true;
     bool does_hand_collide = true;
@@ -63,11 +64,16 @@ struct grabbable
         base_diff = base_diff.identity();
     }
 
+    void set_self_owned()
+    {
+        self_owned = true;
+    }
+
     bool inside(vec3f pos)
     {
         mat3f rot;
 
-        if(ctr == nullptr)
+        //if(ctr == nullptr)
         {
             btTransform trans;
 
@@ -87,11 +93,11 @@ struct grabbable
             return within(b, rot.transp() * rel);
         }
 
-        rot = ctr->rot_quat.get_rotation_matrix();
+        /*rot = ctr->rot_quat.get_rotation_matrix();
 
         vec3f my_pos = xyz_to_vec(ctr->pos);
 
-        return within(b, rot.transp() * (pos - my_pos));
+        return within(b, rot.transp() * (pos - my_pos));*/
     }
 
     ///grabbed
@@ -296,9 +302,37 @@ struct grabbable
             }
         }
 
+        if(self_owned)
+        {
+            btTransform trans;
+            rigid_body->getMotionState()->getWorldTransform(trans);
+
+            vec3f pos = xyzf_to_vec(trans.getOrigin());
+            quaternion qrot = convert_from_bullet_quaternion(trans.getRotation());
+
+            ctr->set_pos(conv_implicit<cl_float4>(pos));
+            ctr->set_rot_quat(qrot);
+        }
+
         last_ftime = ftime;
         last_world_id = bullet_scene->info.internal_step_id;
     }
+
+    /*vec3f get_pos()
+    {
+        if(ctr)
+        {
+            return xyz_to_vec(ctr->pos);
+        }
+        else
+        {
+            btTransform trans;
+
+            rigid_body->getMotionState()->getWorldTransform(trans);
+
+            btVector3 pos = trans.getOrigin();
+        }
+    }*/
 
     bool is_grabbed()
     {
@@ -415,9 +449,11 @@ struct grabbable_manager
                 if(g->parent_id != -1)
                     continue;
 
-                cl_float4 gpos = g->ctr->pos;
+                /*cl_float4 gpos = g->ctr->pos;
 
-                vec3f gfpos = {gpos.x, gpos.y, gpos.z};
+                vec3f gfpos = {gpos.x, gpos.y, gpos.z};*/
+
+                vec3f gfpos = g->get_pos();
 
                 g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - pinch_pos);
             }

@@ -21,7 +21,7 @@
 				<Option type="1" />
 				<Option compiler="mingw64" />
 				<Compiler>
-					<Add option="-Ofast" />
+					<Add option="-O2" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -44,6 +44,7 @@
 		<Compiler>
 			<Add option="-std=gnu++14" />
 			<Add option="-Wno-narrowing" />
+			<Add option="-Wreturn-type" />
 			<Add option="-DNDEBUG" />
 			<Add option="-DGLEW_STATIC" />
 			<Add option="-DFLUID" />
@@ -131,6 +132,7 @@
 		<Unit filename="bbox.hpp" />
 		<Unit filename="grabbables.hpp" />
 		<Unit filename="hand_firer.hpp" />
+		<Unit filename="hand_to_hand_interact.hpp" />
 		<Unit filename="leap_motion.hpp" />
 		<Unit filename="leap_object_manager.hpp" />
 		<Unit filename="main.cpp" />

@@ -38,6 +38,7 @@ struct hand_to_hand_interactor
         int reference_hand_id = -1;
         float len = 0;
         grabbable* g = nullptr;
+        bool suppress = false;
 
         std::vector<objects_container*> objs;
     };
@@ -158,7 +159,95 @@ struct hand_to_hand_interactor
 
         for(auto& i : finished)
         {
+            if(i.suppress)
+                continue;
+
             tick_finished(i);
+        }
+
+        for(int i=0; i<finished.size(); i++)
+        {
+            finished_slide& fs = finished[i];
+
+            if(fs.g->is_grabbed() && !fs.suppress)
+            {
+                lg::log("HO HO");
+
+                objects_container* base = context->make_new();
+                base->isloaded = true;
+                base->cache = false; //?
+
+                fs.g->ctr = base;
+
+                int n = get_num_from_len(fs.len);
+
+                vec3f avg = get_avg_pos(fs.objs, n);
+
+                btTransform trans;
+                fs.g->rigid_body->getMotionState()->getWorldTransform(trans);
+
+                quaternion world_rot = convert_from_bullet_quaternion(trans.getRotation());
+
+                vec3f dir = {0, 0, 1};
+
+                float gap = (cylinder_length + cylinder_separation);
+
+                vec3f base_pos = {0, 0, -fs.len/2.f + cylinder_separation + cylinder_length};
+
+                //for(auto& i : fs.objs)
+                for(int i=0; i<fs.objs.size() && i < n; i++)
+                {
+                    objects_container* obj = fs.objs[i];
+
+                    ///need to space out, test for the moment
+
+                    //vec3f pos = xyz_to_vec(obj->pos);
+                    //vec3f offset = pos - avg;
+
+                    vec3f offset = base_pos;
+
+                    obj->set_pos(conv_implicit<cl_float4>(offset));
+                    obj->set_rot_quat({{0,0,0,1}});
+
+                    //printf("pos %f %f %f\n", EXPAND_3(pos));
+                    //printf("offset %f %f %f\n", EXPAND_3(offset));
+
+                    obj->set_parent(base);
+
+                    base_pos = base_pos + dir * gap;
+                }
+
+                base->set_pos(conv_implicit<cl_float4>(avg));
+                base->set_rot_quat({{0, 0, 0, 1}});
+
+                fs.g->is_kinematic = true;
+                fs.g->set_self_owned();
+
+                //finished.erase(finished.begin() + i);
+                //i--;
+
+                fs.suppress = true;
+            }
+
+            if(fs.suppress)
+            {
+                /*for(auto& i : fs.g->ctr->transform_children)
+                {
+                    vec3f pos = xyz_to_vec(i->pos);
+
+                    printf("%f %f %f lpos\n", pos.v[0], pos.v[1], pos.v[2]);
+                }*/
+
+                vec3f pos = xyz_to_vec(fs.g->ctr->pos);
+
+                btTransform trans;
+                fs.g->rigid_body->getMotionState()->getWorldTransform(trans);
+
+                vec3f physpos = xyzf_to_vec(trans.getOrigin());
+
+                //printf("%f %f %f lpos\n", pos.v[0], pos.v[1], pos.v[2]);
+                //printf("%f %f %f phys\n", physpos.v[0], physpos.v[1], physpos.v[2]);
+            }
         }
     }
 
@@ -285,6 +374,8 @@ struct hand_to_hand_interactor
         vec3f avg_pos = get_avg_pos(fs.objs, n);
 
         btRigidBody* body = fs.g->rigid_body;
+        body->setFriction(2.f);
+        body->setRollingFriction(2.f);
 
         btTransform trans;
         trans.setOrigin(btVector3(avg_pos.v[0], avg_pos.v[1], avg_pos.v[2]));
