@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
         avg_ftime /= 2;
 
-        //if(key.isKeyPressed(sf::Keyboard::M))
+        if(key.isKeyPressed(sf::Keyboard::M))
             std::cout << c.getElapsedTime().asMicroseconds() << std::endl;
 
         if(key.isKeyPressed(sf::Keyboard::Comma))
