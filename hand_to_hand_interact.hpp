@@ -197,23 +197,14 @@ struct hand_to_hand_interactor
 
                 vec3f base_pos = {0, 0, -fs.len/2.f + cylinder_separation + cylinder_length};
 
-                //for(auto& i : fs.objs)
                 for(int i=0; i<fs.objs.size() && i < n; i++)
                 {
                     objects_container* obj = fs.objs[i];
-
-                    ///need to space out, test for the moment
-
-                    //vec3f pos = xyz_to_vec(obj->pos);
-                    //vec3f offset = pos - avg;
 
                     vec3f offset = base_pos;
 
                     obj->set_pos(conv_implicit<cl_float4>(offset));
                     obj->set_rot_quat({{0,0,0,1}});
-
-                    //printf("pos %f %f %f\n", EXPAND_3(pos));
-                    //printf("offset %f %f %f\n", EXPAND_3(offset));
 
                     obj->set_parent(base);
 
@@ -264,19 +255,8 @@ struct hand_to_hand_interactor
     ///wrong terminate should do nothing, except wiat for a enw pinch to spawn the object
     void tick_slide(slide_in_progress& s)
     {
-        std::vector<leap_object> objects = leap_object_manage->get_objects();
-
-        leap_object* base_obj = nullptr;
-        leap_object* grab_obj = nullptr;
-
-        for(leap_object& obj : objects)
-        {
-            if(obj.current_positional.hand_id == s.reference_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
-                base_obj = &obj;
-
-            if(obj.current_positional.hand_id == s.grabber_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
-                grab_obj = &obj;
-        }
+        leap_object* base_obj = leap_object_manage->get_leap_object(s.reference_hand_id, 1, 3);
+        leap_object* grab_obj = leap_object_manage->get_leap_object(s.grabber_hand_id, 1, 3);
 
         if(base_obj == nullptr || grab_obj == nullptr)
             return;
@@ -341,15 +321,7 @@ struct hand_to_hand_interactor
         if(n <= 0)
             return;
 
-        std::vector<leap_object> objects = leap_object_manage->get_objects();
-
-        leap_object* base_obj = nullptr;
-
-        for(leap_object& obj : objects)
-        {
-            if(obj.current_positional.hand_id == fs.reference_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
-                base_obj = &obj;
-        }
+        leap_object* base_obj = leap_object_manage->get_leap_object(fs.reference_hand_id, 1, 3);
 
         if(base_obj == nullptr)
             return;
@@ -412,15 +384,7 @@ struct hand_to_hand_interactor
     {
         lg::log("Slide terminated");
 
-        std::vector<leap_object> objects = leap_object_manage->get_objects();
-
-        leap_object* base_obj = nullptr;
-
-        for(leap_object& obj : objects)
-        {
-            if(obj.current_positional.hand_id == s.reference_hand_id && obj.current_positional.bone_num == 3 && obj.current_positional.finger_num == 1)
-                base_obj = &obj;
-        }
+        leap_object* base_obj = leap_object_manage->get_leap_object(s.reference_hand_id, 1, 3);
 
         if(base_obj == nullptr)
             return;

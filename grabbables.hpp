@@ -385,6 +385,7 @@ struct grabbable_manager
     }
 
     ///if grabbed by multiple hands -> take the average
+    ///implement the above now m8
     void tick(float ftime)
     {
         std::vector<pinch> pinches = motion->get_pinches();
