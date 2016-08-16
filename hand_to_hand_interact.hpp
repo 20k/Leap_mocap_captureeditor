@@ -211,6 +211,11 @@ struct hand_to_hand_interactor
                     base_pos = base_pos + dir * gap;
                 }
 
+                for(int i=n; i<fs.objs.size(); i++)
+                {
+                    fs.objs[i]->set_active(false);
+                }
+
                 base->set_pos(conv_implicit<cl_float4>(avg));
                 base->set_rot_quat(world_rot);
 
@@ -283,7 +288,15 @@ struct hand_to_hand_interactor
         if(n < 0)
             return;
 
-        for(int i=s.objs.size(); i <= n; i++)
+        int batch = 10;
+
+        int n_rounded = n;
+
+        if((n % batch) != 0)
+            n_rounded = n - (n % batch) + batch;
+
+
+        for(int i=s.objs.size(); i <= n_rounded; i++)
         {
             objects_container* ctr = context->make_new();
             ctr->set_file("../openclrenderer/objects/high_cylinder_forward.obj");
@@ -292,11 +305,12 @@ struct hand_to_hand_interactor
             ///yet. Its possible, i just need to figure it out cleanly
             ctr->request_scale(10.f);
 
-            context->load_active();
             context->build_request();
 
             s.objs.push_back(ctr);
         }
+
+        context->load_active();
 
         for(int i=0; i<n; i++)
         {
