@@ -551,7 +551,7 @@ struct leap_motion
             float derived_distance = (thumb_pos - index_pos).length();
 
             ///8cm
-            p.derived_pinch_strength = std::max(1.f - (derived_distance / 80.f), 0.f);
+            p.derived_pinch_strength = std::max(1.f - (derived_distance / 75.f), 0.f);
             //printf("Pdist %f %f\n", p.pinch_strength, (thumb_pos - index_pos).length());
 
 
