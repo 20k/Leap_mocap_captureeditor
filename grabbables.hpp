@@ -37,7 +37,7 @@ struct grabbable
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
-    int max_history = 8;
+    int max_history = 4;
 
     sf::Clock hysteresis_time;
 
@@ -406,7 +406,7 @@ struct grabbable_manager
         float pinch_strength_to_release = 0.001f;
         float pinch_strength_to_grab = 0.8f;
         float pinch_strength_to_disable_collisions = 0.1f;
-        float release_hysteresis_time_ms = 20.f;
+        float release_hysteresis_time_ms = 10.f;
 
         for(pinch& p : pinches)
         {
