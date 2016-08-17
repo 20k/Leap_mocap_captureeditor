@@ -30,6 +30,7 @@ struct pinch
     quat hand_rot;
     vec3f pos;
     float pinch_strength;
+    float derived_pinch_strength;
     int hand_id;
 };
 
@@ -546,6 +547,12 @@ struct leap_motion
             p.pos.v[2] = -p.pos.v[2];
             p.pinch_strength = h.pinch_strength;
             p.hand_id = h.id;
+
+            float derived_distance = (thumb_pos - index_pos).length();
+
+            ///8cm
+            p.derived_pinch_strength = std::max(1.f - (derived_distance / 80.f), 0.f);
+            //printf("Pdist %f %f\n", p.pinch_strength, (thumb_pos - index_pos).length());
 
 
             LEAP_QUATERNION q = h.middle.bones[0].rotation;

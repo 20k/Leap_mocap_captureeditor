@@ -193,6 +193,15 @@ int main(int argc, char *argv[])
 
         example->tick();
 
+        leap.tick();
+        leap_object_spawner.tick();
+        grab_manager.tick(window.get_frametime_ms());
+        phys.tick();
+        hand_fire.tick();
+        hand_to_hand.tick();
+
+        context.flush_locations();
+
         compute::event event;
 
         {
@@ -208,13 +217,6 @@ int main(int argc, char *argv[])
 
             context.fetch()->swap_depth_buffers();
         }
-
-        leap.tick();
-        leap_object_spawner.tick();
-        grab_manager.tick(window.get_frametime_ms());
-        phys.tick();
-        hand_fire.tick();
-        hand_to_hand.tick();
 
 
         std::vector<pvec> positions = hand_fire.get_fire_positions();
@@ -250,7 +252,6 @@ int main(int argc, char *argv[])
 
         context.build_tick(true);
         context.flip();
-        context.flush_locations();
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 

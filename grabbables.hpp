@@ -39,6 +39,18 @@ struct grabbable
     std::deque<vec3f> history;
     int max_history = 8;
 
+    sf::Clock hysteresis_time;
+
+    void reset_release_hysteresis()
+    {
+        hysteresis_time.restart();
+    }
+
+    bool within_release_hysteresis(float time_ms)
+    {
+        return hysteresis_time.getElapsedTime().asMicroseconds() / 1000.f < time_ms;
+    }
+
     void init(objects_container* _ctr, btRigidBody* _rigid_body)
     {
         ctr = _ctr;
@@ -391,17 +403,18 @@ struct grabbable_manager
         std::vector<pinch> pinches = motion->get_pinches();
 
         ///ok this needs to be hysteresis now, where we grab if > .8, but only let go if < 0.2
-        float pinch_strength_to_release = 0.1f;
+        float pinch_strength_to_release = 0.001f;
         float pinch_strength_to_grab = 0.8f;
         float pinch_strength_to_disable_collisions = 0.1f;
+        float release_hysteresis_time_ms = 20.f;
 
         for(pinch& p : pinches)
         {
-            if(p.pinch_strength < pinch_strength_to_release)
+            if(p.derived_pinch_strength < pinch_strength_to_release)
             {
                 for(grabbable* g : grabbables)
                 {
-                    if(p.hand_id == g->parent_id)
+                    if(p.hand_id == g->parent_id && !g->within_release_hysteresis(release_hysteresis_time_ms))
                         g->unparent(bullet_scene);
                 }
 
@@ -482,6 +495,9 @@ struct grabbable_manager
                 if(p.hand_id == g->parent_id)
                 {
                     g->set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
+
+                    if(p.derived_pinch_strength >= pinch_strength_to_release)
+                        g->reset_release_hysteresis();
 
                     unparent = false;
                 }
