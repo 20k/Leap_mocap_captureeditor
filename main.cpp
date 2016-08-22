@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
 
     engine window;
 
+    window.append_opencl_extra_command_line("-D SHADOWBIAS=10");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
     window.set_camera_pos({0, 108, -169});
@@ -136,6 +137,7 @@ int main(int argc, char *argv[])
     light::add_light(&l);
 
     l.set_pos({0, 1000, 0});
+    l.set_shadow_casting(1);
 
     light::add_light(&l);
 
@@ -207,6 +209,7 @@ int main(int argc, char *argv[])
         {
             ///do manual async on thread
             ///make a enforce_screensize method, rather than make these hackily do it
+            window.generate_realtime_shadowing(*context.fetch());
             event = window.draw_bulk_objs_n(*context.fetch());
 
             //event = window.do_pseudo_aa();
