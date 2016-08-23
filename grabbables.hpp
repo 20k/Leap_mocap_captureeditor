@@ -41,6 +41,7 @@ struct grabbable
     vec3f slide_saved_parent = {0,0,0};
     bool slide_parent_init = false;
     bool slide_towards_parent = false;
+    bool can_slide = false;
 
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
@@ -59,7 +60,7 @@ struct grabbable
         return hysteresis_time.getElapsedTime().asMicroseconds() / 1000.f < time_ms;
     }
 
-    void init(objects_container* _ctr, btRigidBody* _rigid_body)
+    void init(objects_container* _ctr, btRigidBody* _rigid_body, bool _can_slide = false)
     {
         ctr = _ctr;
         rigid_body = _rigid_body;
@@ -80,6 +81,8 @@ struct grabbable
             b.min = {bmin.x(), bmin.y(), bmin.z()};
             b.max = {bmax.x(), bmax.y(), bmax.z()};
         }
+
+        can_slide = _can_slide;
 
         base_diff = base_diff.identity();
     }
@@ -138,7 +141,7 @@ struct grabbable
 
         is_parented = true;
 
-        if(slide)
+        if(slide && can_slide)
         {
             slide_towards_parent = true;
             slide_timer = 0;
@@ -416,13 +419,13 @@ struct grabbable_manager
         leap_object_manage = _leap_object_manage;
     }
 
-    grabbable* add(objects_container* ctr, btRigidBody* rigid_body, bool override_kinematic = false)
+    grabbable* add(objects_container* ctr, btRigidBody* rigid_body, bool override_kinematic = false, bool can_slide = false)
     {
         if(rigid_body->isStaticOrKinematicObject() && !override_kinematic)
             return nullptr;
 
         grabbable* g = new grabbable;
-        g->init(ctr, rigid_body);
+        g->init(ctr, rigid_body, can_slide);
 
         grabbables.push_back(g);
 

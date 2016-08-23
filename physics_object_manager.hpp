@@ -54,7 +54,7 @@ struct physics_object_manager
 
             objects.push_back(ctr);
 
-            grab_manage->add(ctr, body);
+            grab_manage->add(ctr, body, false, true);
         }
 
         btTransform trans;
