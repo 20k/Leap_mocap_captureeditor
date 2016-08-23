@@ -27,6 +27,7 @@ struct bone : positional
 
 struct pinch
 {
+    vec3f hand_pos;
     quat hand_rot;
     vec3f pos;
     float pinch_strength;
@@ -543,8 +544,13 @@ struct leap_motion
             vec3f index_pos = xyz_to_vec(h.index.stabilized_tip_position);
 
             pinch p;
+
             p.pos = (thumb_pos*1 + index_pos) / 2.f;
             p.pos.v[2] = -p.pos.v[2];
+
+            p.hand_pos = xyz_to_vec(h.palm.position);
+            p.hand_pos.v[2] = -p.hand_pos.v[2];
+
             p.pinch_strength = h.pinch_strength;
             p.hand_id = h.id;
 

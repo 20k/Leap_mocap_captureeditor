@@ -460,6 +460,11 @@ struct grabbable_manager
 
             vec3f pinch_pos = p.pos;
 
+            vec3f hand_pos = p.hand_pos;
+
+            vec3f weighted = hand_pos * 0.7f + pinch_pos * 0.3f;
+
+            ///make everything relative to hand center
             for(grabbable* g : grabbables)
             {
                 bool within = g->inside(pinch_pos);
@@ -476,7 +481,7 @@ struct grabbable_manager
 
                 vec3f gfpos = g->get_pos();
 
-                g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - pinch_pos);
+                g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - weighted);
             }
         }
 
@@ -501,7 +506,9 @@ struct grabbable_manager
             {
                 if(p.hand_id == g->parent_id)
                 {
-                    g->set_trans(conv_implicit<cl_float4>(p.pos), p.hand_rot);
+                    vec3f weighted = p.hand_pos * 0.7f + p.pos * 0.3f;
+
+                    g->set_trans(conv_implicit<cl_float4>(weighted), p.hand_rot);
 
                     if(p.derived_pinch_strength >= pinch_strength_to_release)
                         g->reset_release_hysteresis();
