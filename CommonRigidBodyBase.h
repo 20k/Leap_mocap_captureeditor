@@ -514,8 +514,11 @@ struct CommonRigidBodyBase : public CommonExampleInterface
     ///so
     void changeGroup(btRigidBody* body, short group, short collidesWithMask)
     {
-        m_dynamicsWorld->removeRigidBody(body);
-        m_dynamicsWorld->addRigidBody(body, group, collidesWithMask);
+        btBroadphaseProxy* proxy = body->getBroadphaseProxy();
+        proxy->m_collisionFilterGroup = group;
+        proxy->m_collisionFilterMask = collidesWithMask;
+        //m_dynamicsWorld->removeRigidBody(body);
+        //m_dynamicsWorld->addRigidBody(body, group, collidesWithMask);
     }
 
     void removeRigidBody(btRigidBody* body)

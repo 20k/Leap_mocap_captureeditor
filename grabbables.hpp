@@ -45,8 +45,13 @@ struct grabbable
 
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
+    ///I need to fiddle with the history, and potentially the release stuff
+    ///these are the biggest impediments to juggling
     std::deque<vec3f> history;
-    int max_history = 4;
+    int max_history = 6;
+
+    std::deque<float> angular_stability_history;
+    int max_stability_history = 4;
 
     sf::Clock hysteresis_time;
 
@@ -279,6 +284,8 @@ struct grabbable
     ///milliseconds
     void tick(float ftime, CommonRigidBodyBase* bullet_scene)
     {
+        //should_hand_collide = false;
+
         if(time_elapsed_since_release_ms >= time_needed_since_release_to_recollide_ms && should_hand_collide)
         {
             make_collide_hands(bullet_scene);
@@ -303,6 +310,11 @@ struct grabbable
 
                 int n = 0;
 
+                if(history.size() > 0)
+                    history.pop_back();
+                if(history.size() > 0)
+                    history.pop_back();
+
                 for(auto& i : history)
                 {
                     //if(n == history.size() / 2)
@@ -316,7 +328,8 @@ struct grabbable
                 if(n > 0)
                     avg = avg / n;
 
-                rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
+                if(n > 0)
+                    rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
             }
         }
 
@@ -340,8 +353,19 @@ struct grabbable
             if(history.size() > max_history)
                 history.pop_front();
 
+            //angular_stability_history
             //printf("vel %f %f %f\n", vel.x(), vel.y(), vel.z());
         }
+
+        angular_stability_history.push_back(get_scaled_angular_stability());
+
+        if(angular_stability_history.size() > max_stability_history)
+            angular_stability_history.pop_front();
+
+        /*if(!is_kinematic)
+        {
+            history.clear();
+        }*/
 
         if(is_kinematic && slide_timer < slide_time_ms && slide_towards_parent)
         {
@@ -364,6 +388,38 @@ struct grabbable
 
         last_ftime = ftime;
         last_world_id = bullet_scene->info.internal_step_id;
+    }
+
+    float get_angular_velocity()
+    {
+        btVector3 vel = rigid_body->getAngularVelocity();
+
+        vec3f ang = xyzf_to_vec(vel);
+
+        return ang.length();
+    }
+
+    float get_scaled_angular_stability()
+    {
+        float maxv = 10.f;
+
+        return clamp(1.f - (get_angular_velocity() / maxv), 0.f, 1.f);
+    }
+
+    float get_min_angular_stability()
+    {
+        float mins = FLT_MAX;
+
+        if(angular_stability_history.size() == 0)
+            return get_scaled_angular_stability();
+
+        for(auto& i : angular_stability_history)
+        {
+            if(i < mins)
+                mins = i;
+        }
+
+        return mins;
     }
 
     /*vec3f get_pos()
@@ -448,15 +504,24 @@ struct grabbable_manager
 
         for(pinch& p : pinches)
         {
-            if(p.pinch_strength < pinch_strength_to_release)
+            for(grabbable* g : grabbables)
             {
-                for(grabbable* g : grabbables)
+                float angular_stability = g->get_min_angular_stability();
+
+                angular_stability /= 2.f;
+
+                //if(g->parent_id != -1)
+                //    printf("%f minstab\n", angular_stability);
+
+                if(p.pinch_strength < pinch_strength_to_release + angular_stability)
                 {
+                    //printf("%f minstab\n", angular_stability);
+
                     if(p.hand_id == g->parent_id && !g->within_release_hysteresis(release_hysteresis_time_ms))
                         g->unparent(bullet_scene);
                 }
 
-                continue;
+                //continue;
             }
 
             ///tips
@@ -529,10 +594,6 @@ struct grabbable_manager
         ///but if down the bottom it works in tick
         ///but not overall
         ///this works for some reason now, something funky is going on with bullet kinematics
-        for(grabbable* g : grabbables)
-        {
-            g->tick(ftime, bullet_scene);
-        }
 
         for(grabbable* g : grabbables)
         {
@@ -547,6 +608,8 @@ struct grabbable_manager
                 {
                     vec3f weighted = p.hand_pos * 0.7f + p.pos * 0.3f;
 
+                    //printf("%f ang\n", g->get_angular_velocity());
+
                     g->set_trans(conv_implicit<cl_float4>(weighted), p.hand_rot);
 
                     if(p.pinch_strength >= pinch_strength_to_release)
@@ -559,6 +622,12 @@ struct grabbable_manager
             if(unparent)
                 g->unparent(bullet_scene);
         }
+
+        for(grabbable* g : grabbables)
+        {
+            g->tick(ftime, bullet_scene);
+        }
+
     }
 
     std::map<pinch, std::vector<btRigidBody*>, by_id> get_all_pinched(const std::vector<btRigidBody*>& check_bodies, float pinch_threshold)
