@@ -37,7 +37,7 @@ struct grabbable
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
-    int max_history = 8;
+    int max_history = 4;
 
     sf::Clock hysteresis_time;
 
@@ -189,7 +189,7 @@ struct grabbable
 
         btTransform newTrans;
 
-        rigid_body->getMotionState()->getWorldTransform(newTrans);
+        //rigid_body->getMotionState()->getWorldTransform(newTrans);
 
         newTrans.setOrigin(btVector3(pos.v[0], pos.v[1], pos.v[2]));
         newTrans.setRotation(btQuaternion(n.x(), n.y(), n.z(), n.w()));
@@ -266,29 +266,6 @@ struct grabbable
             make_no_collide_hands(bullet_scene);
         }
 
-        if(is_kinematic && last_world_id != bullet_scene->info.internal_step_id)
-        {
-            //rigid_body->saveKinematicState(1/60.f);
-
-            btVector3 vel = rigid_body->getLinearVelocity();
-            btVector3 angular = rigid_body->getAngularVelocity();
-
-            //vec3f pos = get_pos();
-
-            //printf("pos %f %f %f\n", pos.v[0], pos.v[1], pos.v[2]);
-
-            avg_vel = avg_vel + (vec3f){vel.x(), vel.y(), vel.z()};
-
-            avg_vel = avg_vel / 2.f;
-
-            history.push_back({vel.x(), vel.y(), vel.z()});
-
-            if(history.size() > max_history)
-                history.pop_front();
-
-            //printf("vel %f %f %f\n", vel.x(), vel.y(), vel.z());
-        }
-
 
         time_elapsed_since_release_ms += ftime;
 
@@ -319,6 +296,29 @@ struct grabbable
 
                 rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
             }
+        }
+
+        if(is_kinematic && last_world_id != bullet_scene->info.internal_step_id)
+        {
+            //rigid_body->saveKinematicState(1/60.f);
+
+            btVector3 vel = rigid_body->getLinearVelocity();
+            btVector3 angular = rigid_body->getAngularVelocity();
+
+            //vec3f pos = get_pos();
+
+            //printf("pos %f %f %f\n", pos.v[0], pos.v[1], pos.v[2]);
+
+            avg_vel = avg_vel + (vec3f){vel.x(), vel.y(), vel.z()};
+
+            avg_vel = avg_vel / 2.f;
+
+            history.push_back({vel.x(), vel.y(), vel.z()});
+
+            if(history.size() > max_history)
+                history.pop_front();
+
+            //printf("vel %f %f %f\n", vel.x(), vel.y(), vel.z());
         }
 
         if(self_owned)
@@ -417,7 +417,7 @@ struct grabbable_manager
 
         for(pinch& p : pinches)
         {
-            if(p.derived_pinch_strength < pinch_strength_to_release)
+            if(p.pinch_strength < pinch_strength_to_release)
             {
                 for(grabbable* g : grabbables)
                 {
@@ -510,7 +510,7 @@ struct grabbable_manager
 
                     g->set_trans(conv_implicit<cl_float4>(weighted), p.hand_rot);
 
-                    if(p.derived_pinch_strength >= pinch_strength_to_release)
+                    if(p.pinch_strength >= pinch_strength_to_release)
                         g->reset_release_hysteresis();
 
                     unparent = false;
