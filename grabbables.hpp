@@ -31,8 +31,16 @@ struct grabbable
     uint32_t last_world_id = -1;
 
     vec3f offset = {0,0,0};
+    vec3f ideal_offset = {0,0,0};
 
     bool is_parented = false;
+    bool slide_toward_parent = false;
+
+    float slide_timer = 0.f;
+    float slide_time_ms = 300.f;
+    vec3f slide_saved_parent = {0,0,0};
+    bool slide_parent_init = false;
+    bool slide_towards_parent = false;
 
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
@@ -113,7 +121,7 @@ struct grabbable
     }
 
     ///grabbed
-    void parent(CommonRigidBodyBase* bullet_scene, int id, quaternion base, quaternion current_parent, vec3f position_offset)
+    void parent(CommonRigidBodyBase* bullet_scene, int id, quaternion base, quaternion current_parent, vec3f position_offset, vec3f ideal_position_offset, bool slide = false)
     {
         parent_id = id;
 
@@ -126,8 +134,16 @@ struct grabbable
         mat3f hand_rot = current_parent.get_rotation_matrix();
 
         offset = hand_rot.transp() * position_offset;
+        ideal_offset = hand_rot.transp() * ideal_position_offset;
 
         is_parented = true;
+
+        if(slide)
+        {
+            slide_towards_parent = true;
+            slide_timer = 0;
+            slide_parent_init = false;
+        }
 
         //printf("%f %f %f %f base\n", base_diff.x(), base_diff.y(), base_diff.z(), base_diff.w());
     }
@@ -198,6 +214,9 @@ struct grabbable
 
         if(ctr)
             ctr->set_pos(conv_implicit<cl_float4>(pos));
+
+        slide_parent_init = true;
+        slide_saved_parent = absolute_pos;
     }
 
     void make_dynamic(CommonRigidBodyBase* bullet_scene)
@@ -254,6 +273,7 @@ struct grabbable
         does_hand_collide = true;
     }
 
+    ///milliseconds
     void tick(float ftime, CommonRigidBodyBase* bullet_scene)
     {
         if(time_elapsed_since_release_ms >= time_needed_since_release_to_recollide_ms && should_hand_collide)
@@ -265,7 +285,6 @@ struct grabbable
         {
             make_no_collide_hands(bullet_scene);
         }
-
 
         time_elapsed_since_release_ms += ftime;
 
@@ -321,6 +340,11 @@ struct grabbable
             //printf("vel %f %f %f\n", vel.x(), vel.y(), vel.z());
         }
 
+        if(is_kinematic && slide_timer < slide_time_ms && slide_towards_parent)
+        {
+            offset = offset * 0.95f + ideal_offset * 0.05f;
+        }
+
         if(self_owned)
         {
             btTransform trans;
@@ -332,6 +356,8 @@ struct grabbable
             ctr->set_pos(conv_implicit<cl_float4>(pos));
             ctr->set_rot_quat(qrot);
         }
+
+        slide_timer += ftime;
 
         last_ftime = ftime;
         last_world_id = bullet_scene->info.internal_step_id;
@@ -405,6 +431,7 @@ struct grabbable_manager
 
     ///if grabbed by multiple hands -> take the average
     ///implement the above now m8
+    ///milliseconds
     void tick(float ftime)
     {
         std::vector<pinch> pinches = motion->get_pinches();
@@ -469,6 +496,8 @@ struct grabbable_manager
             for(grabbable* g : grabbables)
             {
                 bool within = g->inside(pinch_pos, pinch_radius);
+                ///slide towards parent if we're picked up by the fudge factor
+                bool within_sans_fudge = g->inside(pinch_pos, 0.f);
 
                 if(!within)
                     continue;
@@ -482,7 +511,7 @@ struct grabbable_manager
 
                 vec3f gfpos = g->get_pos();
 
-                g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - weighted);
+                g->parent(bullet_scene, p.hand_id, g->get_quat(), p.hand_rot, gfpos - weighted, pinch_pos - weighted, !within_sans_fudge);
             }
         }
 
