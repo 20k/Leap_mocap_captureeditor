@@ -7,14 +7,14 @@ struct bbox
     vec3f max;
 };
 
-bool within(bbox& b, vec3f test_relative)
+bool within(bbox& b, vec3f test_relative, float fudge = 0.f)
 {
     for(int i=0; i<3; i++)
-        if(test_relative.v[i] < b.min.v[i]) ///lower than minimum point, not inside cube
+        if(test_relative.v[i] < b.min.v[i] - fudge) ///lower than minimum point, not inside cube
             return false;
 
     for(int i=0; i<3; i++)
-        if(test_relative.v[i] >= b.max.v[i]) ///greater than maximum point, not inside cube
+        if(test_relative.v[i] >= b.max.v[i] + fudge) ///greater than maximum point, not inside cube
             return false;
 
     ///must be within cube

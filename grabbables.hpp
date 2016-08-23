@@ -81,7 +81,7 @@ struct grabbable
         self_owned = true;
     }
 
-    bool inside(vec3f pos)
+    bool inside(vec3f pos, float fudge)
     {
         mat3f rot;
 
@@ -102,7 +102,7 @@ struct grabbable
 
             vec3f rel = pos - v;
 
-            return within(b, rot.transp() * rel);
+            return within(b, rot.transp() * rel, fudge);
         }
 
         /*rot = ctr->rot_quat.get_rotation_matrix();
@@ -414,6 +414,7 @@ struct grabbable_manager
         float pinch_strength_to_grab = 0.8f;
         float pinch_strength_to_disable_collisions = 0.1f;
         float release_hysteresis_time_ms = 10.f;
+        float pinch_radius = 10.f;
 
         for(pinch& p : pinches)
         {
@@ -467,7 +468,7 @@ struct grabbable_manager
             ///make everything relative to hand center
             for(grabbable* g : grabbables)
             {
-                bool within = g->inside(pinch_pos);
+                bool within = g->inside(pinch_pos, pinch_radius);
 
                 if(!within)
                     continue;
