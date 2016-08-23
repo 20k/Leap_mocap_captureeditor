@@ -498,7 +498,13 @@ struct grabbable_manager
             ///make everything relative to hand center
             for(grabbable* g : grabbables)
             {
-                bool within = g->inside(pinch_pos, pinch_radius);
+                bool within;
+
+                if(g->can_slide)
+                    within = g->inside(pinch_pos, pinch_radius);
+                else
+                    within = g->inside(pinch_pos, 0.f);
+
                 ///slide towards parent if we're picked up by the fudge factor
                 bool within_sans_fudge = g->inside(pinch_pos, 0.f);
 
