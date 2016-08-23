@@ -37,7 +37,7 @@ struct grabbable
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     std::deque<vec3f> history;
-    int max_history = 4;
+    int max_history = 8;
 
     sf::Clock hysteresis_time;
 
@@ -302,13 +302,20 @@ struct grabbable
             {
                 vec3f avg = {0,0,0};
 
+                int n = 0;
+
                 for(auto& i : history)
                 {
+                    //if(n == history.size() / 2)
+                    //    break;
+
                     avg += i;
+
+                    n++;
                 }
 
-                if(history.size() > 0)
-                    avg = avg / (float)history.size();
+                if(n > 0)
+                    avg = avg / n;
 
                 rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
             }

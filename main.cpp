@@ -101,7 +101,9 @@ int main(int argc, char *argv[])
 
     engine window;
 
-    window.append_opencl_extra_command_line("-D SHADOWBIAS=10");
+    window.append_opencl_extra_command_line("-D SHADOWBIAS=20");
+    window.append_opencl_extra_command_line("-D SHADOWEXP=2");
+    window.append_opencl_extra_command_line("-D SSAO_RAD=5");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
     window.set_camera_pos({0, 108, -169});
@@ -129,10 +131,10 @@ int main(int argc, char *argv[])
 
     light l;
     l.set_col((cl_float4){1.0f, 1.0f, 1.0f, 0.0f});
-    l.set_shadow_casting(0);
+    l.set_shadow_casting(1);
     l.set_brightness(0.5f);
     l.radius = 100000;
-    l.set_pos((cl_float4){-400, 300, -100, 0});
+    l.set_pos((cl_float4){-400, 800, -100, 0});
 
     light::add_light(&l);
 
@@ -212,7 +214,7 @@ int main(int argc, char *argv[])
             window.generate_realtime_shadowing(*context.fetch());
             event = window.draw_bulk_objs_n(*context.fetch());
 
-            //event = window.do_pseudo_aa();
+            event = window.do_pseudo_aa();
 
             //event = window.draw_godrays(*context.fetch());
 
