@@ -72,6 +72,7 @@ struct leap_motion
     bool request_available_for_processing_mt = false;
 
     uint32_t bpp_mt = 0, width_mt = 0, height_mt = 0;
+    float xscale_mt = 0, yscale_mt = 0;
     uint32_t width = 0, height = 0;
     int current_width = 0, current_height = 0;
 
@@ -256,15 +257,9 @@ struct leap_motion
                 bpp_mt = image_complete_event->properties->bpp;
                 width_mt = image_complete_event->properties->width;
                 height_mt = image_complete_event->properties->height;
+                xscale_mt = image_complete_event->properties->x_scale;
+                yscale_mt = image_complete_event->properties->y_scale;
                 returned_buffer_mt = image_complete_event->pfnData;
-
-                for(int i=0; i<image_complete_event->data_written; i++)
-                {
-                    //printf("%i test\n", ((uint8_t*)image_complete_event->pfnData)[i]);
-                    //std::cout << ((uint8_t*)image_complete_event->pfnData)[i] << std::endl;
-                }
-
-                //std::cout << image_complete_event->properties->format << std::endl;
 
                 //printf("got image with id %i\n", image_complete_event->info.frame_id);
                 buffer_excluder.unlock();
@@ -302,9 +297,9 @@ struct leap_motion
         uint8_t* sep = (uint8_t*)malloc(sizeof(uint8_t)*len);
 
         memcpy(sep, ptr, sizeof(uint8_t)*len);
-        buffer_excluder.unlock();
+        //buffer_excluder.unlock();
 
-        buffer_excluder.lock();
+        //buffer_excluder.lock();
         int w = width_mt;
         int h = height_mt;
         int bpp = bpp_mt;
@@ -440,16 +435,27 @@ struct leap_motion
 
         if(is_finished && new_frame_available && should_get_images)
         {
+            hand_excluder.lock();
+            buffer_excluder.lock();
+
+            new_frame_available_mt = false;
+            request_finished_mt = false;
+
             LeapRequestImages(connection, &descrip, &token);
 
-            hand_excluder.lock();
+            buffer_excluder.unlock();
+            hand_excluder.unlock();
+
+            /*hand_excluder.lock();
             new_frame_available_mt = false;
             hand_excluder.unlock();
 
             buffer_excluder.lock();
             request_finished_mt = false;
-            buffer_excluder.unlock();
+            buffer_excluder.unlock();*/
         }
+
+        //printf("pr %i %i\n", is_finished, new_frame_available);
 
         int64_t now = LeapGetNow();
 
