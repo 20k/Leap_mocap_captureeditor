@@ -90,6 +90,7 @@ struct leap_motion
     float camera_offset_x_mm = 20.f;
     float image_angle_deg = 151.93f;
     float image_half_angle_deg = image_angle_deg / 2.f;
+    float image_half_angle_rad = (image_half_angle_deg / 360.f) * 2 * M_PI;
 
     LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
 
@@ -104,10 +105,10 @@ struct leap_motion
 
     std::atomic_int quit;
 
-    void enable_images(object_context& ctx)
+    void enable_images(object_context& ctx, object_context& ctx2)
     {
         ctr_1 = ctx.make_new();
-        ctr_2 = ctx.make_new();
+        ctr_2 = ctx2.make_new();
 
         ctr_1->cache = false;
         ctr_2->cache = false;
@@ -308,7 +309,7 @@ struct leap_motion
         }
     }
 
-    void handle_container(objects_container* ctr, uint8_t* buf, int len, int w, int h, int xs, int ys)
+    void handle_container(objects_container* ctr, uint8_t* buf, int len, int w, int h, int xs, int ys, int side, vec2f avg_pos, float separation_angle)
     {
         object_context& ctx = *ctr->parent;
         texture_context& tex_ctx = ctx.tex_ctx;
@@ -359,7 +360,7 @@ struct leap_motion
         cl_float4 threshold = {0.3, 0.3, 0.3, 1};
 
         tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, buf, len, w, h, false);
-        tex->update_gpu_texture_threshold(ctx.get_current_gpu()->tex_gpu_ctx, threshold, {0,0,0,0});
+        tex->update_gpu_texture_threshold_split(ctx.get_current_gpu()->tex_gpu_ctx, threshold, {0,0,0,0}, side, (cl_float2){avg_pos.x(), avg_pos.y()}, separation_angle, ctr->dynamic_scale);
         tex->update_gpu_mipmaps(ctx.get_current_gpu()->tex_gpu_ctx, cl::cqueue);
 
         //printf("%i gpuid\n", tex->id);
@@ -392,9 +393,31 @@ struct leap_motion
         buffer_excluder.unlock();
 
 
+
+        vec2f avg_pos = {0,0,0};
+        float separation_angle = 0.f;
+
+        positional lhand, rhand;
+
+        get_specific_positional(0, 2, 0, &lhand);
+        get_specific_positional(1, 2, 0, &rhand);
+
+        //if(lhand.hand_id == -1 || rhand.hand_id == -1)
+        //    return;
+
+        //avg_pos = (lhand.pos.xy() + rhand.pos.xy()) / 2.f;
+
+        if(lhand.hand_id == -1)
+            avg_pos = {-100, 0, 0};
+        if(rhand.hand_id == -1)
+            avg_pos = {FLT_MAX, 0, 0};
+
+        if(lhand.hand_id != -1 && rhand.hand_id != -1)
+            avg_pos = (lhand.pos.xy() + rhand.pos.xy()) / 2.f;
+
         //handle_container(ctr_1, lower_half, len, w, h, xscale, yscale);
-        handle_container(ctr_1, upper_half, len/2, w, h, xscale, yscale/2);
-        handle_container(ctr_2, lower_half, len/2, w, h, xscale, yscale/2);
+        handle_container(ctr_1, upper_half, len/2, w, h, xscale, yscale/2, 0, avg_pos, separation_angle);
+        handle_container(ctr_2, lower_half, len/2, w, h, xscale, yscale/2, 1, avg_pos, separation_angle);
 
         //printf("dfdfdf %i %i\n", ctr_1->objs[0].tid, ctr_2->objs[0].tid);
 
@@ -630,6 +653,22 @@ struct leap_motion
         }
 
         return ret;
+    }
+
+    bool get_specific_positional(int type, int finger_num, int bone_num, positional* out)
+    {
+        auto p = get_positionals();
+
+        for(positional& i : p)
+        {
+            if(i.bone_num == bone_num && i.finger_num == finger_num && i.type == type)
+            {
+                *out = i;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     std::vector<positional> hands_to_positional(std::map<uint32_t, LEAP_HAND>& hands)

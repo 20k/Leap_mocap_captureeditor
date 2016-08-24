@@ -160,6 +160,41 @@ struct leap_object_manager
         }
     }
 
+    void handle_ctr(leap_object* obj, objects_container* ctr1, int which = 1)
+    {
+        mat3f r = mat3f().XRot(-M_PI/2) * mat3f().ZRot(M_PI);
+
+        quaternion q;
+        q.load_from_matrix(r);
+
+        ctr1->set_rot_quat(q);
+
+        float h_fov = motion->device_info.h_fov;
+        float v_fov = motion->device_info.v_fov;
+
+
+        vec3f hand_pos = obj->current_positional.pos;
+
+        //vec3f right_camera_position = {motion->camera_offset_x_mm * which, 0, 0};
+
+        ///take distance to camera, correct for depth projection (rough)
+
+        ctr1->set_pos({motion->camera_offset_x_mm*2 * which, obj->current_positional.pos.y() - 50, 0});
+
+        float height = obj->current_positional.pos.y();
+
+
+        float half_dim = height * tan(motion->image_half_angle_rad);
+
+        half_dim *= 2;
+
+        float base = 400;
+
+        float scale = half_dim / base;
+
+        ctr1->set_dynamic_scale(scale);
+    }
+
     void tick_image_processing()
     {
         objects_container* ctr1 = motion->ctr_1;
@@ -171,31 +206,27 @@ struct leap_object_manager
         if(!motion->should_get_images)
             return;
 
-        mat3f r = mat3f().XRot(-M_PI/2) * mat3f().ZRot(M_PI);
-
-        quaternion q;
-        q.load_from_matrix(r);
-
-        ctr1->set_rot_quat(q);
-
-        float h_fov = motion->device_info.h_fov;
-        float v_fov = motion->device_info.v_fov;
-
         leap_object* rhand = get_hand(eLeapHandType_Right, 2, 0);
 
         if(!rhand)
         {
             ctr1->set_pos({0,0,0});
-            return;
+            //return;
         }
+        else
+            handle_ctr(rhand, ctr1);
 
-        vec3f hand_pos = rhand->current_positional.pos;
+        leap_object* lhand = get_hand(eLeapHandType_Left, 2, 0);
 
-        vec3f right_camera_position = {motion->camera_offset_x_mm, 0, 0};
+        if(!lhand)
+            ctr2->set_pos({0,0,0});
+        else
+            handle_ctr(lhand, ctr2, -1);
 
-        ///take distance to camera, correct for depth projection (rough)
+        //static float f = 1;
+        //f += 0.1f;
 
-        ctr1->set_pos({0, rhand->current_positional.pos.y(), 0});
+        //ctr1->set_dynamic_scale(f);
 
         //printf("%f\n", h_fov / v_fov);
 

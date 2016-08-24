@@ -92,6 +92,12 @@ int main(int argc, char *argv[])
     object_context context;
     context.set_clear_colour({0.25, 0.25, 0.25});
 
+    object_context transparency_context;
+    transparency_context.set_clear_colour({0,0,0});
+
+    object_context transparency_context2;
+    transparency_context2.set_clear_colour({0,0,0});
+
     objects_container* sponza = context.make_new();
     sponza->set_file("../openclrenderer/objects/cube.obj");
     //sponza->set_load_cube_blank({10, 10, 10});
@@ -106,6 +112,7 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D SHADOWBIAS=20");
     window.append_opencl_extra_command_line("-D SHADOWEXP=2");
     window.append_opencl_extra_command_line("-D SSAO_RAD=5");
+    window.append_opencl_extra_command_line("-D depth_icutoff=100");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
     window.set_camera_pos({0, 108, -169});
@@ -158,7 +165,7 @@ int main(int argc, char *argv[])
     float avg_ftime = 6000;
 
     leap_motion leap;
-    leap.enable_images(context);
+    leap.enable_images(transparency_context, transparency_context2);
 
     //spawn_cubes(context, grab_manager);
 
@@ -183,6 +190,12 @@ int main(int argc, char *argv[])
 	hand_to_hand_interactor hand_to_hand;
 	hand_to_hand.init(&leap_object_spawner, &grab_manager, &leap, &context, example);
 
+	transparency_context.build(true);
+	transparency_context.flip();
+
+	transparency_context2.build(true);
+	transparency_context2.flip();
+
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -199,19 +212,34 @@ int main(int argc, char *argv[])
 
         compute::event event;
 
+        context.build_tick(true);
+        transparency_context.build_tick(true);
+        transparency_context2.build_tick(true);
+        context.flip();
+        transparency_context.flip();
+        transparency_context2.flip();
+
         {
             ///do manual async on thread
             ///make a enforce_screensize method, rather than make these hackily do it
             window.generate_realtime_shadowing(*context.fetch());
             event = window.draw_bulk_objs_n(*context.fetch());
+            //event = window.do_pseudo_aa();
 
-            event = window.do_pseudo_aa();
+            event = window.draw_bulk_objs_n(*transparency_context.fetch());
+            event = window.draw_bulk_objs_n(*transparency_context2.fetch());
+
+            event = window.blend_with_depth(*transparency_context.fetch(), *context.fetch());
+            event = window.blend_with_depth(*transparency_context2.fetch(), *context.fetch());
+
 
             //event = window.draw_godrays(*context.fetch());
 
             window.increase_render_events();
 
             context.fetch()->swap_depth_buffers();
+            transparency_context.fetch()->swap_depth_buffers();
+            transparency_context2.fetch()->swap_depth_buffers();
         }
 
 
@@ -229,7 +257,8 @@ int main(int argc, char *argv[])
 
 
         context.flush_locations();
-
+        transparency_context.flush_locations();
+        transparency_context2.flush_locations();
 
         std::vector<pvec> positions = hand_fire.get_fire_positions();
 
@@ -261,9 +290,6 @@ int main(int argc, char *argv[])
 
             example->insertIntoVector(rigid);
         }
-
-        context.build_tick(true);
-        context.flip();
 
         //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 

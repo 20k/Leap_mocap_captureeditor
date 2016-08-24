@@ -96,7 +96,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
         btVector3 accum(0,0,0);
 
-        int nmax = 2;
+        int nmax = 3;
         int c = 0;
 
         for(auto& i : velocity_history[obj])
@@ -186,7 +186,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 	{
 		if (m_dynamicsWorld)
 		{
-			m_dynamicsWorld->stepSimulation(deltaTime, 1, 1/90.f);
+			m_dynamicsWorld->stepSimulation(deltaTime, 1, 1/70.f);
 
 			//printf("ftime %f\n", deltaTime);
 		}
