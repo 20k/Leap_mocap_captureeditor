@@ -294,9 +294,11 @@ struct leap_motion
         buffer_excluder.lock();
         uint8_t* ptr = (uint8_t*)returned_buffer_mt;
 
-        uint8_t* sep = (uint8_t*)malloc(sizeof(uint8_t)*len);
+        uint8_t* upper_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
+        uint8_t* lower_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
 
-        memcpy(sep, ptr, sizeof(uint8_t)*len);
+        memcpy(upper_half, ptr, sizeof(uint8_t)*len/2);
+        memcpy(lower_half, ptr + len/2, sizeof(uint8_t)*len/2);
         //buffer_excluder.unlock();
 
         //buffer_excluder.lock();
@@ -310,7 +312,7 @@ struct leap_motion
         object_context& ctx = *ctr->parent;
         texture_context& tex_ctx = ctx.tex_ctx;
 
-        h *= 2;
+        //h *= 2;
 
         ///won't realloc texture atm
         if(!ctr->isactive)
@@ -332,11 +334,9 @@ struct leap_motion
             ctx.load_active();
 
             ctr->set_two_sided(true);
-            //ctr->patch_non_square_texture_maps();
-            //ctr->patch_non_2pow_texture_maps();
             ctr->patch_stretch_texture_to_full();
 
-            ctr->scale({xscale, yscale, 1.f});
+            ctr->scale({xscale, yscale/2, 1.f});
 
             ctx.build(true); ///we need the gpu data there now
         }
@@ -352,7 +352,9 @@ struct leap_motion
             return;
         }
 
-        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, sep, len, w, h);
+        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, upper_half, len/2, w, h, false);
+
+        ctr->set_rot({0,0,M_PI});
     }
 
     void tick()
