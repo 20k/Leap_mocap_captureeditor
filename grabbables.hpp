@@ -252,14 +252,6 @@ struct grabbable
         rigid_body->setLinearVelocity(bullet_scene->getBodyAvgVelocity(rigid_body));
         rigid_body->setAngularVelocity(bullet_scene->getBodyAvgAngularVelocity(rigid_body));
 
-        /*btTransform trans;
-        rigid_body->getMotionState()->getWorldTransform(trans);
-
-        trans.setOrigin(btVector3(kinematic_current.x(), kinematic_current.y(), kinematic_current.z()));
-
-        rigid_body->getMotionState()->setWorldTransform(trans);
-        //rigid_body->setInterpolationWorldTransform(trans);*/
-
         toggleSaveMotion();
 
         bullet_scene->makeDynamic(rigid_body);

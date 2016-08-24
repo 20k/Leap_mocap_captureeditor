@@ -62,7 +62,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
     std::map<btRigidBody*, kinematic_source> rigid_to_kinematic_info;
 
     std::map<btCollisionObject*, std::deque<body_velocities>> velocity_history;
-    int max_history = 3;
+    int max_history = 5;
 
     btVector3 getBodyAvgVelocity(btRigidBody* body)
     {
@@ -96,12 +96,20 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 
         btVector3 accum(0,0,0);
 
+        int nmax = 2;
+        int c = 0;
+
         for(auto& i : velocity_history[obj])
         {
             accum += i.angular;
+
+            c++;
+
+            if(c == nmax)
+                break;
         }
 
-        return accum / n;
+        return accum / c;
     }
 
     void setKinematicSource(btRigidBody* body, kinematic_source s)

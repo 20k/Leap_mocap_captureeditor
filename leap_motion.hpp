@@ -253,7 +253,7 @@ struct leap_motion
         //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
         //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
-        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*9, pEvent, 99999);
+        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*0, pEvent, 99999);
 
         if(res != eLeapRS_Success)
             printf("res %x\n", res);
