@@ -49,6 +49,18 @@ struct leap_object_manager
         return nullptr;
     }
 
+    leap_object* get_hand(int type, int finger_num, int bone_num)
+    {
+        for(auto& i : objects)
+        {
+            positional& p = i.current_positional;
+
+            if(p.type == type && p.finger_num == finger_num && p.bone_num == bone_num)
+                return &i;
+        }
+
+        return nullptr;
+    }
 
     void tick()
     {
@@ -164,7 +176,30 @@ struct leap_object_manager
         quaternion q;
         q.load_from_matrix(r);
 
-        ctr2->set_rot_quat(q);
+        ctr1->set_rot_quat(q);
+
+        float h_fov = motion->device_info.h_fov;
+        float v_fov = motion->device_info.v_fov;
+
+        leap_object* rhand = get_hand(eLeapHandType_Right, 2, 0);
+
+        if(!rhand)
+        {
+            ctr1->set_pos({0,0,0});
+            return;
+        }
+
+        vec3f hand_pos = rhand->current_positional.pos;
+
+        vec3f right_camera_position = {motion->camera_offset_x_mm, 0, 0};
+
+        ///take distance to camera, correct for depth projection (rough)
+
+        ctr1->set_pos({0, rhand->current_positional.pos.y(), 0});
+
+        //printf("%f\n", h_fov / v_fov);
+
+        //printf("h %f %f\n", h_fov, v_fov);
     }
 
     std::vector<leap_object> get_objects()

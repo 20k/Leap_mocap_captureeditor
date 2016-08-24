@@ -1,6 +1,7 @@
 #ifndef LEAP_MOTION_H_INCLUDED
 #define LEAP_MOTION_H_INCLUDED
 
+#include <leap/leapC.h>
 
 struct positional
 {
@@ -13,6 +14,8 @@ struct positional
     int finger_num = -1;
     ///who knows. Well, the leap motion people do
     int hand_id = -1;
+
+    int type = -1;
 };
 
 struct finger : positional
@@ -40,6 +43,8 @@ struct leap_motion
     LEAP_CONNECTION connection;
     LEAP_DEVICE* device;
     LEAP_CALIBRATION calibration;
+    LEAP_DEVICE_INFO device_info;
+
 
     LEAP_DEVICE_REF my_device_ref;
 
@@ -81,6 +86,10 @@ struct leap_motion
     ///1 is right, 2 is left
     objects_container* ctr_1 = nullptr;
     objects_container* ctr_2 = nullptr;
+
+    float camera_offset_x_mm = 20.f;
+    float image_angle_deg = 151.93f;
+    float image_half_angle_deg = image_angle_deg / 2.f;
 
     LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
 
@@ -212,6 +221,11 @@ struct leap_motion
             lg::log("device error ", state);
             return;
         }
+
+        device_info.serial = nullptr;
+        device_info.serial_length = 0;
+
+        LeapGetDeviceInfo(*device, &device_info);
     }
 
     std::mutex hand_excluder;
@@ -652,6 +666,7 @@ struct leap_motion
                     p.bone_num = bb;
                     p.finger_num = jj;
                     p.hand_id = first.id;
+                    p.type = first.type;
 
                     ret.push_back(p);
                 }
