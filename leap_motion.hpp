@@ -303,6 +303,8 @@ struct leap_motion
         int w = width_mt;
         int h = height_mt;
         int bpp = bpp_mt;
+        int xscale = xscale_mt;
+        int yscale = yscale_mt;
         buffer_excluder.unlock();
 
         object_context& ctx = *ctr->parent;
@@ -319,7 +321,9 @@ struct leap_motion
 
             printf("Made new with %i %i\n", w, h);
 
-            cl_float2 dim = {w, h};
+            //cl_float2 dim = {w, h};
+
+            cl_float2 dim = {200, 200};
 
             ctr->set_load_func(std::bind(obj_rect, std::placeholders::_1, *ntex, dim));
 
@@ -329,7 +333,10 @@ struct leap_motion
 
             ctr->set_two_sided(true);
             //ctr->patch_non_square_texture_maps();
-            ctr->patch_non_2pow_texture_maps();
+            //ctr->patch_non_2pow_texture_maps();
+            ctr->patch_stretch_texture_to_full();
+
+            ctr->scale({xscale, yscale, 1.f});
 
             ctx.build(true); ///we need the gpu data there now
         }
