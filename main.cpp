@@ -221,6 +221,7 @@ int main(int argc, char *argv[])
 
         leap.tick();
         leap_object_spawner.tick();
+        leap_object_spawner.tick_image_processing();
         phys.tick();
         hand_fire.tick();
         hand_to_hand.tick();

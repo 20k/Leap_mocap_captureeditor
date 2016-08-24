@@ -148,6 +148,25 @@ struct leap_object_manager
         }
     }
 
+    void tick_image_processing()
+    {
+        objects_container* ctr1 = motion->ctr_1;
+        objects_container* ctr2 = motion->ctr_2;
+
+        if(ctr1 == nullptr || ctr2 == nullptr)
+            return;
+
+        if(!motion->should_get_images)
+            return;
+
+        mat3f r = mat3f().XRot(-M_PI/2) * mat3f().ZRot(M_PI);
+
+        quaternion q;
+        q.load_from_matrix(r);
+
+        ctr2->set_rot_quat(q);
+    }
+
     std::vector<leap_object> get_objects()
     {
         return objects;

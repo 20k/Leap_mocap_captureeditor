@@ -385,6 +385,16 @@ struct leap_motion
         //printf("dfdfdf %i %i\n", ctr_1->objs[0].tid, ctr_2->objs[0].tid);
 
         ctr_2->set_pos({200*xscale, 0, 0});
+
+        /*mat3f rot = mat3f().ZRot(M_PI);
+
+        rot = mat3f().XRot(-M_PI/2) * rot;
+
+        quaternion q;
+        q.load_from_matrix(rot);
+
+        ctr_2->set_rot_quat(q);
+        ctr_2->set_pos({0,0,0});*/
     }
 
     void tick()
