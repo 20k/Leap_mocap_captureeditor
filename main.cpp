@@ -158,6 +158,7 @@ int main(int argc, char *argv[])
     float avg_ftime = 6000;
 
     leap_motion leap;
+    leap.enable_images(context);
 
     //spawn_cubes(context, grab_manager);
 

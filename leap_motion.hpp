@@ -60,18 +60,44 @@ struct leap_motion
     int64_t start_time_us = 0;
     int64_t current_time_offset_ms = 0;
 
+    ///for image
+    uint64_t required_buffer_len = 0;
+    bool buffer_required_reallocate = false;
+    void* buffer_for_image = nullptr;
+    void* returned_buffer_mt = nullptr; ///these two have the same value, but because its returned from leap, cannot be optimised away
+    int64_t last_frame_id_mt = 0;
+    int64_t last_frame_id = 0;
+    bool new_frame_available_mt = true; ///so we can make sure we dont request the same two images in a row
+    bool request_finished_mt = true;
+    bool request_available_for_processing_mt = false;
+
+    uint32_t bpp_mt = 0, width_mt = 0, height_mt = 0;
+    uint32_t width = 0, height = 0;
+    int current_width = 0, current_height = 0;
+
     bool start_init = false;
+    bool should_get_images = false;
+    objects_container* ctr = nullptr;
 
     LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
 
     LEAP_TRACKING_EVENT* pEvent = (LEAP_TRACKING_EVENT*)calloc(99999, sizeof(char));
 
+    LEAP_IMAGE_FRAME_REQUEST_TOKEN token;
+    LEAP_IMAGE_FRAME_DESCRIPTION descrip;
 
     sf::Clock clk;
 
     std::thread thr;
 
     std::atomic_int quit;
+
+    void enable_images(object_context& ctx)
+    {
+        ctr = ctx.make_new();
+
+        should_get_images = true;
+    }
 
     leap_motion()
     {
@@ -182,6 +208,8 @@ struct leap_motion
     }
 
     std::mutex hand_excluder;
+    std::mutex buffer_excluder;
+    std::mutex frame_excluder;
 
     void poll()
     {
@@ -209,11 +237,120 @@ struct leap_motion
                 if(hand_history_mt.size() > max_history)
                     hand_history_mt.pop_front();
 
+                if(last_frame_id_mt != track->info.frame_id)
+                    new_frame_available_mt = true;
+
+                last_frame_id_mt = track->info.frame_id;
+
                 hand_excluder.unlock();
+            }
+
+            if(evt.type == eLeapEventType_ImageComplete)
+            {
+                const LEAP_IMAGE_COMPLETE_EVENT* image_complete_event = evt.image_complete_event;
+
+                buffer_excluder.lock();
+                request_finished_mt = true;
+                request_available_for_processing_mt = true;
+
+                bpp_mt = image_complete_event->properties->bpp;
+                width_mt = image_complete_event->properties->width;
+                height_mt = image_complete_event->properties->height;
+                returned_buffer_mt = image_complete_event->pfnData;
+
+                for(int i=0; i<image_complete_event->data_written; i++)
+                {
+                    //printf("%i test\n", ((uint8_t*)image_complete_event->pfnData)[i]);
+                    //std::cout << ((uint8_t*)image_complete_event->pfnData)[i] << std::endl;
+                }
+
+                //std::cout << image_complete_event->properties->format << std::endl;
+
+                //printf("got image with id %i\n", image_complete_event->info.frame_id);
+                buffer_excluder.unlock();
+            }
+
+            if(evt.type == eLeapEventType_ImageRequestError)
+            {
+                const LEAP_IMAGE_FRAME_REQUEST_ERROR_EVENT* image_request_error_event = evt.image_request_error_event;
+
+                buffer_excluder.lock();
+
+                if(image_request_error_event->error == eLeapImageRequestError_InsufficientBuffer)
+                {
+                    if(required_buffer_len != image_request_error_event->required_buffer_len)
+                        buffer_required_reallocate = true;
+
+                    required_buffer_len = image_request_error_event->required_buffer_len;
+                }
+
+                request_finished_mt = true;
+
+                buffer_excluder.unlock();
             }
 
             Sleep(1);
         }
+    }
+
+    void handle_image_processing(uint32_t len)
+    {
+        ///same thread as reallocation so no async needed
+        buffer_excluder.lock();
+        uint8_t* ptr = (uint8_t*)returned_buffer_mt;
+
+        uint8_t* sep = (uint8_t*)malloc(sizeof(uint8_t)*len);
+
+        memcpy(sep, ptr, sizeof(uint8_t)*len);
+        buffer_excluder.unlock();
+
+        buffer_excluder.lock();
+        int w = width_mt;
+        int h = height_mt;
+        int bpp = bpp_mt;
+        buffer_excluder.unlock();
+
+        object_context& ctx = *ctr->parent;
+        texture_context& tex_ctx = ctx.tex_ctx;
+
+        h *= 2;
+
+        ///won't realloc texture atm
+        if(!ctr->isactive)
+        {
+            texture* ntex = tex_ctx.make_new();
+            ///will need to be twice the width I think due to stereoscopy
+            ntex->set_create_colour(sf::Color(255, 0, 255), w, h);
+
+            printf("Made new with %i %i\n", w, h);
+
+            cl_float2 dim = {w, h};
+
+            ctr->set_load_func(std::bind(obj_rect, std::placeholders::_1, *ntex, dim));
+
+            ctr->set_active(true);
+
+            ctx.load_active();
+
+            ctr->set_two_sided(true);
+            //ctr->patch_non_square_texture_maps();
+            ctr->patch_non_2pow_texture_maps();
+
+            ctx.build(true); ///we need the gpu data there now
+        }
+
+        //printf("bpp %i\n", bpp);
+
+        ///should have at least one object as per above
+        texture* tex = tex_ctx.id_to_tex(ctr->objs[0].tid);
+
+        if(tex == nullptr)
+        {
+            lg::log("Wtf texture == nullptr");
+            return;
+        }
+
+        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, sep, len, w, h);
     }
 
     void tick()
@@ -243,16 +380,83 @@ struct leap_motion
 
         hand_map = hand_map_mt;
         hand_history = hand_history_mt;
+        last_frame_id = last_frame_id_mt;
 
         hand_excluder.unlock();
 
+        uint64_t len = 0;
+        bool reallocate = false;
 
+        buffer_excluder.lock();
+        len = required_buffer_len;
+        reallocate = buffer_required_reallocate;
+        buffer_excluder.unlock();
+
+        if(reallocate)
+        {
+            frame_excluder.lock();
+
+            //if(buffer_for_image)
+            //    delete [] buffer_for_image;
+
+            ///its easier to leak on resize as
+            ///1. itll never happen
+            ///2. if we free the image, leap motion will try to write into it and crash
+            buffer_for_image = malloc(sizeof(uint8_t)*len);
+
+            frame_excluder.unlock();
+        }
+
+        descrip.frame_id = last_frame_id;
+        descrip.buffer_len = len;
+        descrip.pBuffer = buffer_for_image;
+        descrip.type = eLeapImageType_Default;
+
+        bool is_finished;
+
+        buffer_excluder.lock();
+        is_finished = request_finished_mt;
+        buffer_excluder.unlock();
+
+        bool new_frame_available;
+
+        hand_excluder.lock();
+        new_frame_available = new_frame_available_mt;
+        hand_excluder.unlock();
+
+        ///process images
+        bool image_available;
+
+        buffer_excluder.lock();
+        image_available = request_available_for_processing_mt;
+        request_available_for_processing_mt = false;
+        buffer_excluder.unlock();
+
+        if(image_available)
+        {
+            handle_image_processing(len);
+        }
+        ///end process
+
+        if(is_finished && new_frame_available && should_get_images)
+        {
+            LeapRequestImages(connection, &descrip, &token);
+
+            hand_excluder.lock();
+            new_frame_available_mt = false;
+            hand_excluder.unlock();
+
+            buffer_excluder.lock();
+            request_finished_mt = false;
+            buffer_excluder.unlock();
+        }
 
         int64_t now = LeapGetNow();
 
         //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
         //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
+        ///-1000*10 is perfectly smooth, but higher latency obvs
         eLeapRS res = LeapInterpolateFrame(connection, now - 1000*0, pEvent, 99999);
 
         if(res != eLeapRS_Success)

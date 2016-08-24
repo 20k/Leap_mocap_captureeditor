@@ -524,7 +524,7 @@ struct grabbable_manager
 
         ///ok this needs to be hysteresis now, where we grab if > .8, but only let go if < 0.2
         float pinch_strength_to_release = 0.001f;
-        float pinch_strength_to_grab = 0.8f;
+        float pinch_strength_to_grab = 0.6f;
         float pinch_strength_to_disable_collisions = 0.1f;
         float release_hysteresis_time_ms = 10.f;
         float pinch_radius = 10.f;
@@ -542,9 +542,7 @@ struct grabbable_manager
 
                 if(p.pinch_strength < pinch_strength_to_release + angular_stability)
                 {
-                    //printf("%f minstab\n", angular_stability);
-
-                    if(p.hand_id == g->parent_id && !g->within_release_hysteresis(release_hysteresis_time_ms))
+                    if(p.hand_id == g->parent_id)// && !g->within_release_hysteresis(release_hysteresis_time_ms))
                         g->unparent(bullet_scene, ftime);
                 }
 
