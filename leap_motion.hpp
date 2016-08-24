@@ -78,7 +78,9 @@ struct leap_motion
 
     bool start_init = false;
     bool should_get_images = false;
-    objects_container* ctr = nullptr;
+    ///1 is right, 2 is left
+    objects_container* ctr_1 = nullptr;
+    objects_container* ctr_2 = nullptr;
 
     LEAP_CLOCK_REBASER* rebase = new LEAP_CLOCK_REBASER;
 
@@ -95,7 +97,11 @@ struct leap_motion
 
     void enable_images(object_context& ctx)
     {
-        ctr = ctx.make_new();
+        ctr_1 = ctx.make_new();
+        ctr_2 = ctx.make_new();
+
+        ctr_1->cache = false;
+        ctr_2->cache = false;
 
         should_get_images = true;
     }
@@ -288,42 +294,22 @@ struct leap_motion
         }
     }
 
-    void handle_image_processing(uint32_t len)
+    void handle_container(objects_container* ctr, uint8_t* buf, int len, int w, int h, int xs, int ys)
     {
-        ///same thread as reallocation so no async needed
-        buffer_excluder.lock();
-        uint8_t* ptr = (uint8_t*)returned_buffer_mt;
-
-        uint8_t* upper_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
-        uint8_t* lower_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
-
-        memcpy(upper_half, ptr, sizeof(uint8_t)*len/2);
-        memcpy(lower_half, ptr + len/2, sizeof(uint8_t)*len/2);
-        //buffer_excluder.unlock();
-
-        //buffer_excluder.lock();
-        int w = width_mt;
-        int h = height_mt;
-        int bpp = bpp_mt;
-        int xscale = xscale_mt;
-        int yscale = yscale_mt;
-        buffer_excluder.unlock();
-
         object_context& ctx = *ctr->parent;
         texture_context& tex_ctx = ctx.tex_ctx;
-
-        //h *= 2;
 
         ///won't realloc texture atm
         if(!ctr->isactive)
         {
             texture* ntex = tex_ctx.make_new();
+            //std::cout << "ntex " << ntex->id << std::endl;
             ///will need to be twice the width I think due to stereoscopy
-            ntex->set_create_colour(sf::Color(255, 0, 255), w, h);
+            ntex->set_create_colour(sf::Color(0, 0, 0), w, h);
 
             printf("Made new with %i %i\n", w, h);
 
-            //cl_float2 dim = {w, h};
+            //printf("NTex id %i\n\n\n\n\n\n\n\n\n\n\n", ntex->id);
 
             cl_float2 dim = {200, 200};
 
@@ -333,15 +319,19 @@ struct leap_motion
 
             ctx.load_active();
 
+            ctr->set_diffuse(10.f);
+
             ctr->set_two_sided(true);
             ctr->patch_stretch_texture_to_full();
 
-            ctr->scale({xscale, yscale/2, 1.f});
+            ctr->scale({xs, ys, 1.f});
 
             ctx.build(true); ///we need the gpu data there now
         }
 
         //printf("bpp %i\n", bpp);
+
+        //printf("Tid %i\n", ctr->objs[0].tid);
 
         ///should have at least one object as per above
         texture* tex = tex_ctx.id_to_tex(ctr->objs[0].tid);
@@ -352,9 +342,49 @@ struct leap_motion
             return;
         }
 
-        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, upper_half, len/2, w, h, false);
+        cl_float4 threshold = {0.3, 0.3, 0.3, 1};
+
+        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, buf, len, w, h, false);
+        tex->update_gpu_texture_threshold(ctx.get_current_gpu()->tex_gpu_ctx, threshold, {0,0,0,0});
+        tex->update_gpu_mipmaps(ctx.get_current_gpu()->tex_gpu_ctx, cl::cqueue);
+
+        //printf("%i gpuid\n", tex->id);
+
+        //printf("%i tex\n", tex_ctx.gid);
 
         ctr->set_rot({0,0,M_PI});
+    }
+
+    void handle_image_processing(uint32_t len)
+    {
+        ///same thread as reallocation so no async needed
+        buffer_excluder.lock();
+        uint8_t* ptr = (uint8_t*)returned_buffer_mt;
+
+        uint8_t* upper_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
+        uint8_t* lower_half = (uint8_t*)malloc(sizeof(uint8_t)*len/2);
+
+        //uint8_t* full = (uint8_t*)malloc(sizeof(uint8_t)*len);
+
+        memcpy(upper_half, ptr, sizeof(uint8_t)*len/2);
+        memcpy(lower_half, ptr + len/2, sizeof(uint8_t)*len/2);
+        //memcpy(full, ptr, sizeof(uint8_t)*len);
+
+        int w = width_mt;
+        int h = height_mt;
+        int bpp = bpp_mt;
+        int xscale = xscale_mt;
+        int yscale = yscale_mt;
+        buffer_excluder.unlock();
+
+
+        //handle_container(ctr_1, lower_half, len, w, h, xscale, yscale);
+        handle_container(ctr_1, upper_half, len/2, w, h, xscale, yscale/2);
+        handle_container(ctr_2, lower_half, len/2, w, h, xscale, yscale/2);
+
+        //printf("dfdfdf %i %i\n", ctr_1->objs[0].tid, ctr_2->objs[0].tid);
+
+        ctr_2->set_pos({200*xscale, 0, 0});
     }
 
     void tick()
