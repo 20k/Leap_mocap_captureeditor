@@ -13,6 +13,8 @@
 #include "CommonWindowInterface.h"
 
 #include <stdint.h>
+#include <map>
+#include <deque>
 
 namespace collision_masks
 {
@@ -25,9 +27,16 @@ namespace collision_masks
     };
 }
 
+struct CommonRigidBodyBase;
+
 struct usr_world_info
 {
     uint32_t internal_step_id = 0;
+    CommonRigidBodyBase* base = nullptr;
+
+    usr_world_info(CommonRigidBodyBase* _base) : base(_base)
+    {
+    }
 };
 
 void step_callback(btDynamicsWorld* world, btScalar timeStep);
@@ -35,6 +44,25 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep);
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
     std::vector<btRigidBody*> rigid_bodies;
+    std::map<btRigidBody*, std::deque<btVector3>> linear_velocity_history;
+    int max_history = 4;
+
+    btVector3 getBodyAvgVelocity(btRigidBody* body)
+    {
+        int n = linear_velocity_history[body].size();
+
+        if(n == 0)
+            return btVector3(0,0,0);
+
+        btVector3 accum(0,0,0);
+
+        for(auto& i : linear_velocity_history[body])
+        {
+            accum += i;
+        }
+
+        return accum / n;
+    }
 
     usr_world_info info;
 
@@ -63,7 +91,8 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		m_dynamicsWorld(0),
 		m_pickedBody(0),
 		m_pickedConstraint(0),
-		m_guiHelper(helper)
+		m_guiHelper(helper),
+		info(this)
 	{
 	}
 	virtual ~CommonRigidBodyBase()

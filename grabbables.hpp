@@ -16,7 +16,7 @@ struct grabbable
     bool does_hand_collide = true;
     float time_elapsed_since_release_ms = 3000;
     ///with kinematic objects
-    float time_needed_since_release_to_recollide_ms = 2000;
+    float time_needed_since_release_to_recollide_ms = 1000;
 
     int frame_wait_restore = 0;
 
@@ -48,7 +48,7 @@ struct grabbable
     ///I need to fiddle with the history, and potentially the release stuff
     ///these are the biggest impediments to juggling
     std::deque<vec3f> history;
-    int max_history = 6;
+    int max_history = 2;
 
     std::deque<float> angular_stability_history;
     int max_stability_history = 4;
@@ -220,8 +220,8 @@ struct grabbable
 
         rigid_body->getMotionState()->setWorldTransform(newTrans);
 
-        if(ctr)
-            ctr->set_pos(conv_implicit<cl_float4>(pos));
+        //if(ctr)
+        //    ctr->set_pos(conv_implicit<cl_float4>(pos));
 
         slide_parent_init = true;
         slide_saved_parent = absolute_pos;
@@ -310,10 +310,10 @@ struct grabbable
 
                 int n = 0;
 
-                if(history.size() > 0)
-                    history.pop_back();
-                if(history.size() > 0)
-                    history.pop_back();
+                //if(history.size() > 0)
+                //    history.pop_back();
+                /*if(history.size() > 0)
+                    history.pop_back();*/
 
                 for(auto& i : history)
                 {
@@ -328,11 +328,14 @@ struct grabbable
                 if(n > 0)
                     avg = avg / n;
 
-                if(n > 0)
-                    rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
+                //if(n > 0)
+                //    rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
+
+                rigid_body->setLinearVelocity(bullet_scene->getBodyAvgVelocity(rigid_body));
             }
         }
 
+        ///so the avg velocity is wrong, because it updates out of 'phase' with this function
         if(is_kinematic && last_world_id != bullet_scene->info.internal_step_id)
         {
             //rigid_body->saveKinematicState(1/60.f);
@@ -491,6 +494,8 @@ struct grabbable_manager
     ///if grabbed by multiple hands -> take the average
     ///implement the above now m8
     ///milliseconds
+    ///it may be that bullet is running on a fixed timestep, and we're running on an interpolated one
+    ///which would mean we cant use a kinematic rigid body
     void tick(float ftime)
     {
         std::vector<pinch> pinches = motion->get_pinches();
@@ -594,6 +599,11 @@ struct grabbable_manager
         ///but if down the bottom it works in tick
         ///but not overall
         ///this works for some reason now, something funky is going on with bullet kinematics
+        for(grabbable* g : grabbables)
+        {
+            g->tick(ftime, bullet_scene);
+        }
+
 
         for(grabbable* g : grabbables)
         {
@@ -622,12 +632,6 @@ struct grabbable_manager
             if(unparent)
                 g->unparent(bullet_scene);
         }
-
-        for(grabbable* g : grabbables)
-        {
-            g->tick(ftime, bullet_scene);
-        }
-
     }
 
     std::map<pinch, std::vector<btRigidBody*>, by_id> get_all_pinched(const std::vector<btRigidBody*>& check_bodies, float pinch_threshold)

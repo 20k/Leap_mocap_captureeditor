@@ -37,6 +37,23 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep)
     if(info == nullptr)
         return;
 
+    for(auto& i : info->base->rigid_bodies)
+    {
+        btRigidBody* body = i;
+
+        //btTransform trans;
+        //body->getMotionState()->getWorldTransform(trans);
+
+        btVector3 vel = body->getLinearVelocity();
+
+        info->base->linear_velocity_history[body].push_back(vel);
+
+        if(info->base->linear_velocity_history[body].size() > info->base->max_history)
+        {
+            info->base->linear_velocity_history[body].pop_front();
+        }
+    }
+
     info->internal_step_id++;
 }
 

@@ -71,6 +71,8 @@
 ///move light down and to the side for specular
 ///2 hands -> shotgun <-- second
 ///turn stretched finger into pole <-- first
+///step one: fix the disconnect between hand and grabbable
+///step two: implement image passthrough
 int main(int argc, char *argv[])
 {
     lg::set_logfile("./logging.txt");
@@ -139,7 +141,7 @@ int main(int argc, char *argv[])
     light::add_light(&l);
 
     l.set_pos({0, 1000, 0});
-    l.set_shadow_casting(1);
+    l.set_shadow_casting(0);
 
     light::add_light(&l);
 
@@ -193,18 +195,6 @@ int main(int argc, char *argv[])
                 window.window.close();
         }
 
-        example->stepSimulation(window.get_frametime_ms() / 1000.f);
-
-        example->tick();
-
-        leap.tick();
-        leap_object_spawner.tick();
-        grab_manager.tick(window.get_frametime_ms());
-        phys.tick();
-        hand_fire.tick();
-        hand_to_hand.tick();
-
-        context.flush_locations();
 
         compute::event event;
 
@@ -222,6 +212,21 @@ int main(int argc, char *argv[])
 
             context.fetch()->swap_depth_buffers();
         }
+
+
+        example->stepSimulation(window.get_frametime_ms() / 1000.f);
+
+        example->tick();
+
+        leap.tick();
+        leap_object_spawner.tick();
+        phys.tick();
+        hand_fire.tick();
+        hand_to_hand.tick();
+        grab_manager.tick(window.get_frametime_ms());
+
+
+        context.flush_locations();
 
 
         std::vector<pvec> positions = hand_fire.get_fire_positions();
