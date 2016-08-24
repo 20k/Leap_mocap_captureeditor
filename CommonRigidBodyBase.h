@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include <map>
 #include <deque>
+#include <vec/vec.hpp>
+#include <SFML/System/Clock.hpp>
 
 namespace collision_masks
 {
@@ -33,6 +35,7 @@ struct usr_world_info
 {
     uint32_t internal_step_id = 0;
     CommonRigidBodyBase* base = nullptr;
+    sf::Clock time_elapsed_since_tick;
 
     usr_world_info(CommonRigidBodyBase* _base) : base(_base)
     {
@@ -41,30 +44,69 @@ struct usr_world_info
 
 void step_callback(btDynamicsWorld* world, btScalar timeStep);
 
+struct kinematic_source
+{
+    vec3f* pos = nullptr;
+    quaternion* rot = nullptr;
+};
+
+struct body_velocities
+{
+    btVector3 linear = btVector3(0,0,0);
+    btVector3 angular = btVector3(0,0,0);
+};
+
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
     std::vector<btRigidBody*> rigid_bodies;
-    std::map<btCollisionObject*, std::deque<btVector3>> linear_velocity_history;
-    int max_history = 4;
+    std::map<btRigidBody*, kinematic_source> rigid_to_kinematic_info;
+
+    std::map<btCollisionObject*, std::deque<body_velocities>> velocity_history;
+    int max_history = 3;
 
     btVector3 getBodyAvgVelocity(btRigidBody* body)
     {
         ///hmm. we may not need to do this?
         btCollisionObject* obj = static_cast<btCollisionObject*>(body);
 
-        int n = linear_velocity_history[obj].size();
+        int n = velocity_history[obj].size();
 
         if(n == 0)
             return btVector3(0,0,0);
 
         btVector3 accum(0,0,0);
 
-        for(auto& i : linear_velocity_history[obj])
+        for(auto& i : velocity_history[obj])
         {
-            accum += i;
+            accum += i.linear;
         }
 
         return accum / n;
+    }
+
+    btVector3 getBodyAvgAngularVelocity(btRigidBody* body)
+    {
+        ///hmm. we may not need to do this?
+        btCollisionObject* obj = static_cast<btCollisionObject*>(body);
+
+        int n = velocity_history[obj].size();
+
+        if(n == 0)
+            return btVector3(0,0,0);
+
+        btVector3 accum(0,0,0);
+
+        for(auto& i : velocity_history[obj])
+        {
+            accum += i.angular;
+        }
+
+        return accum / n;
+    }
+
+    void setKinematicSource(btRigidBody* body, kinematic_source s)
+    {
+        rigid_to_kinematic_info[body] = s;
     }
 
     usr_world_info info;
@@ -128,7 +170,7 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		///It has been decided! 1 unit = 1mm
 		m_dynamicsWorld->setGravity(btVector3(0, -1000, 0));
 
-		m_dynamicsWorld->setInternalTickCallback(step_callback, &info);
+		m_dynamicsWorld->setInternalTickCallback(step_callback, &info, false);
 	}
 
 

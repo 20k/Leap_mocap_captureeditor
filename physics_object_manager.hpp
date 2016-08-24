@@ -66,6 +66,7 @@ struct physics_object_manager
             btRigidBody* body = (*bodies)[i];
 
             body->getMotionState()->getWorldTransform(trans);
+            //trans = body->getWorldTransform();
 
             vec3f pos = {trans.getOrigin().x(), trans.getOrigin().y(), trans.getOrigin().z()};
 

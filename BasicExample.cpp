@@ -30,6 +30,9 @@ subject to the following restrictions:
 
 //typedef void (*btInternalTickCallback)(btDynamicsWorld *world, btScalar timeStep);
 
+///ok, maybe its because we interpolate
+///and then swap to being dynamic
+///so it swaps us back to our initial kinematic position
 void step_callback(btDynamicsWorld* world, btScalar timeStep)
 {
     usr_world_info* info = (usr_world_info*)world->getWorldUserInfo();
@@ -49,6 +52,31 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep)
         if(body == nullptr)
             continue;
 
+        /*kinematic_source s = info->base->rigid_to_kinematic_info[body];
+
+        if(body->isKinematicObject())
+        {
+            btTransform trans;
+            body->getMotionState()->getWorldTransform(trans);
+
+            if(s.pos)
+            {
+                trans.setOrigin(btVector3(s.pos->x(), s.pos->y(), s.pos->z()));
+            }
+
+            if(s.rot)
+            {
+                trans.setRotation(btQuaternion(s.rot->x(), s.rot->y(), s.rot->z(), s.rot->w()));
+            }
+
+            //body->setInterpolationWorldTransform(trans);
+
+            body->getMotionState()->setWorldTransform(trans);
+
+            //body->saveKinematicState(1/90.f);
+            //body->saveKinematicState(timeStep);
+        }*/
+
         //btRigidBody* body = i;
 
         //obj->getInterpolationLinearVelocity();
@@ -57,18 +85,25 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep)
         //body->getMotionState()->getWorldTransform(trans);
 
         btVector3 vel = body->getLinearVelocity();
+        btVector3 angular = body->getAngularVelocity();
 
         //btVector3 vel = body->getInterpolationLinearVelocity();
 
-        info->base->linear_velocity_history[body].push_back(vel);
+        body_velocities bv;
+        bv.linear = vel;
+        bv.angular = angular;
 
-        if(info->base->linear_velocity_history[body].size() > info->base->max_history)
+        info->base->velocity_history[body].push_back(bv);
+
+        if(info->base->velocity_history[body].size() > info->base->max_history)
         {
-            info->base->linear_velocity_history[body].pop_front();
+            info->base->velocity_history[body].pop_front();
         }
     }
 
     info->internal_step_id++;
+
+    info->time_elapsed_since_tick.restart();
 }
 
 struct BasicExample : public CommonRigidBodyBase

@@ -43,6 +43,12 @@ struct grabbable
     bool slide_towards_parent = false;
     bool can_slide = false;
 
+    vec3f kinematic_current = {0,0,0};
+    vec3f kinematic_old = {0,0,0};
+
+    vec3f remote_pos = {0,0,0};
+    quaternion remote_rot = {{0,0,0,1}};
+
     ///try decreasing max history, and using exponential averages etc
     ///or perhaps even a more explicit jitter removal algorithm
     ///I need to fiddle with the history, and potentially the release stuff
@@ -157,7 +163,7 @@ struct grabbable
     }
 
     ///released for whatever reason
-    void unparent(CommonRigidBodyBase* bullet_scene)
+    void unparent(CommonRigidBodyBase* bullet_scene, float ftime_ms)
     {
         parent_id = -1;
 
@@ -165,7 +171,7 @@ struct grabbable
 
         time_elapsed_since_release_ms = 0;
 
-        make_dynamic(bullet_scene);
+        make_dynamic(bullet_scene, ftime_ms);
 
         is_parented = false;
     }
@@ -219,20 +225,40 @@ struct grabbable
         newTrans.setRotation(btQuaternion(n.x(), n.y(), n.z(), n.w()));
 
         rigid_body->getMotionState()->setWorldTransform(newTrans);
+        //rigid_body->setInterpolationWorldTransform(newTrans);
 
         //if(ctr)
         //    ctr->set_pos(conv_implicit<cl_float4>(pos));
 
         slide_parent_init = true;
         slide_saved_parent = absolute_pos;
+
+        remote_pos = pos;
+        remote_rot = n;
+
+        kinematic_old = kinematic_current;
+        kinematic_current = xyzf_to_vec(rigid_body->getWorldTransform().getOrigin());
     }
 
-    void make_dynamic(CommonRigidBodyBase* bullet_scene)
+    void make_dynamic(CommonRigidBodyBase* bullet_scene, float ftime_ms)
     {
         if(!is_kinematic)
             return;
 
-        //rigid_body->saveKinematicState(1/60.f);
+        float base_time = 1/90.f;
+        float frame_time = ftime_ms / 1000.f;
+
+        rigid_body->saveKinematicState(base_time);
+        rigid_body->setLinearVelocity(bullet_scene->getBodyAvgVelocity(rigid_body));
+        rigid_body->setAngularVelocity(bullet_scene->getBodyAvgAngularVelocity(rigid_body));
+
+        /*btTransform trans;
+        rigid_body->getMotionState()->getWorldTransform(trans);
+
+        trans.setOrigin(btVector3(kinematic_current.x(), kinematic_current.y(), kinematic_current.z()));
+
+        rigid_body->getMotionState()->setWorldTransform(trans);
+        //rigid_body->setInterpolationWorldTransform(trans);*/
 
         toggleSaveMotion();
 
@@ -257,8 +283,6 @@ struct grabbable
     void toggleSaveMotion()
     {
         frame_wait_restore = 2;
-
-        vel_back = rigid_body->getLinearVelocity();
     }
 
     void make_no_collide_hands(CommonRigidBodyBase* bullet_scene)
@@ -284,6 +308,12 @@ struct grabbable
     ///milliseconds
     void tick(float ftime, CommonRigidBodyBase* bullet_scene)
     {
+        kinematic_source s;
+        s.pos = &remote_pos;
+        s.rot = &remote_rot;
+
+        bullet_scene->setKinematicSource(rigid_body, s);
+
         //should_hand_collide = false;
 
         if(time_elapsed_since_release_ms >= time_needed_since_release_to_recollide_ms && should_hand_collide)
@@ -331,7 +361,7 @@ struct grabbable
                 //if(n > 0)
                 //    rigid_body->setLinearVelocity({avg.v[0], avg.v[1], avg.v[2]});
 
-                rigid_body->setLinearVelocity(bullet_scene->getBodyAvgVelocity(rigid_body));
+                //rigid_body->setLinearVelocity(bullet_scene->getBodyAvgVelocity(rigid_body));
             }
         }
 
@@ -523,7 +553,7 @@ struct grabbable_manager
                     //printf("%f minstab\n", angular_stability);
 
                     if(p.hand_id == g->parent_id && !g->within_release_hysteresis(release_hysteresis_time_ms))
-                        g->unparent(bullet_scene);
+                        g->unparent(bullet_scene, ftime);
                 }
 
                 //continue;
@@ -604,7 +634,8 @@ struct grabbable_manager
             g->tick(ftime, bullet_scene);
         }
 
-
+        ///its looking increasingly likely that bullet should be sampling this
+        ///rather than us forcing this on bullet
         for(grabbable* g : grabbables)
         {
             if(g->parent_id == -1)
@@ -630,7 +661,7 @@ struct grabbable_manager
             }
 
             if(unparent)
-                g->unparent(bullet_scene);
+                g->unparent(bullet_scene, ftime);
         }
     }
 
