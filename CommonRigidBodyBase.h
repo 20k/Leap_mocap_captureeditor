@@ -44,19 +44,22 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep);
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
     std::vector<btRigidBody*> rigid_bodies;
-    std::map<btRigidBody*, std::deque<btVector3>> linear_velocity_history;
+    std::map<btCollisionObject*, std::deque<btVector3>> linear_velocity_history;
     int max_history = 4;
 
     btVector3 getBodyAvgVelocity(btRigidBody* body)
     {
-        int n = linear_velocity_history[body].size();
+        ///hmm. we may not need to do this?
+        btCollisionObject* obj = static_cast<btCollisionObject*>(body);
+
+        int n = linear_velocity_history[obj].size();
 
         if(n == 0)
             return btVector3(0,0,0);
 
         btVector3 accum(0,0,0);
 
-        for(auto& i : linear_velocity_history[body])
+        for(auto& i : linear_velocity_history[obj])
         {
             accum += i;
         }

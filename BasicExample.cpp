@@ -37,14 +37,28 @@ void step_callback(btDynamicsWorld* world, btScalar timeStep)
     if(info == nullptr)
         return;
 
-    for(auto& i : info->base->rigid_bodies)
+    btCollisionObjectArray& arr = world->getCollisionObjectArray();
+
+    //for(auto& i : info->base->rigid_bodies)
+    for(int i=0; i<arr.size(); i++)
     {
-        btRigidBody* body = i;
+        btCollisionObject* obj = arr[i];
+
+        btRigidBody* body = dynamic_cast<btRigidBody*>(obj);
+
+        if(body == nullptr)
+            continue;
+
+        //btRigidBody* body = i;
+
+        //obj->getInterpolationLinearVelocity();
 
         //btTransform trans;
         //body->getMotionState()->getWorldTransform(trans);
 
         btVector3 vel = body->getLinearVelocity();
+
+        //btVector3 vel = body->getInterpolationLinearVelocity();
 
         info->base->linear_velocity_history[body].push_back(vel);
 
