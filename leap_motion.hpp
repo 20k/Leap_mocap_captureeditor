@@ -359,9 +359,9 @@ struct leap_motion
 
         cl_float4 threshold = {0.3, 0.3, 0.3, 1};
 
-        tex->update_gpu_texture_mono(ctx.get_current_gpu()->tex_gpu_ctx, buf, len, w, h, false);
-        tex->update_gpu_texture_threshold_split(ctx.get_current_gpu()->tex_gpu_ctx, threshold, {0,0,0,0}, side, (cl_float2){avg_pos.x(), avg_pos.y()}, separation_angle, ctr->dynamic_scale);
-        tex->update_gpu_mipmaps(ctx.get_current_gpu()->tex_gpu_ctx, cl::cqueue);
+        tex->update_gpu_texture_mono(ctx.fetch()->tex_gpu_ctx, buf, len, w, h, false);
+        tex->update_gpu_texture_threshold_split(ctx.fetch()->tex_gpu_ctx, threshold, {0,0,0,0}, side, (cl_float2){avg_pos.x(), avg_pos.y()}, separation_angle, ctr->dynamic_scale);
+        tex->update_gpu_mipmaps(ctx.fetch()->tex_gpu_ctx, cl::cqueue);
 
         //printf("%i gpuid\n", tex->id);
 

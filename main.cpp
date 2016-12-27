@@ -226,20 +226,20 @@ int main(int argc, char *argv[])
             event = window.draw_bulk_objs_n(*context.fetch());
             //event = window.do_pseudo_aa();
 
-            event = window.draw_bulk_objs_n(*transparency_context.fetch());
-            event = window.draw_bulk_objs_n(*transparency_context2.fetch());
+            //event = window.draw_bulk_objs_n(*transparency_context.fetch());
+            //event = window.draw_bulk_objs_n(*transparency_context2.fetch());
 
-            event = window.blend_with_depth(*transparency_context.fetch(), *context.fetch());
-            event = window.blend_with_depth(*transparency_context2.fetch(), *context.fetch());
+            //event = window.blend_with_depth(*transparency_context.fetch(), *context.fetch());
+            //event = window.blend_with_depth(*transparency_context2.fetch(), *context.fetch());
 
 
             //event = window.draw_godrays(*context.fetch());
 
             window.increase_render_events();
 
-            context.fetch()->swap_depth_buffers();
-            transparency_context.fetch()->swap_depth_buffers();
-            transparency_context2.fetch()->swap_depth_buffers();
+            context.fetch()->swap_buffers();
+            transparency_context.fetch()->swap_buffers();
+            transparency_context2.fetch()->swap_buffers();
         }
 
 
