@@ -681,6 +681,7 @@ struct grabbable_manager
 
                 btTransform trans;
 
+                ///Interpolated position, do we want this?
                 body->getMotionState()->getWorldTransform(trans);
 
                 center = center + trans.getOrigin();

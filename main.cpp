@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D SHADOWEXP=2");
     window.append_opencl_extra_command_line("-D SSAO_RAD=5");
     window.append_opencl_extra_command_line("-D depth_icutoff=100");
+    window.append_opencl_extra_command_line("-D LEAP");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
     window.set_camera_pos({0, 108, -169});
@@ -156,7 +157,7 @@ int main(int argc, char *argv[])
     ///
 
     window.set_light_data(light_data);
-    window.construct_shadowmaps();
+    //window.construct_shadowmaps();
 
     printf("load_time %f\n", load_time.getElapsedTime().asMicroseconds() / 1000.f);
 
@@ -224,7 +225,7 @@ int main(int argc, char *argv[])
             ///make a enforce_screensize method, rather than make these hackily do it
             window.generate_realtime_shadowing(*context.fetch());
             event = window.draw_bulk_objs_n(*context.fetch());
-            //event = window.do_pseudo_aa();
+            event = window.do_pseudo_aa();
 
             //event = window.draw_bulk_objs_n(*transparency_context.fetch());
             //event = window.draw_bulk_objs_n(*transparency_context2.fetch());

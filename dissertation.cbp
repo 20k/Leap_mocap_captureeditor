@@ -73,8 +73,6 @@
 			<Add option="-logg" />
 			<Add option="-lleapC" />
 		</Linker>
-		<Unit filename="../openclrenderer/Game/smoke_particles.cpp" />
-		<Unit filename="../openclrenderer/Game/smoke_particles.hpp" />
 		<Unit filename="../openclrenderer/cl2.cl" />
 		<Unit filename="../openclrenderer/clstate.cpp" />
 		<Unit filename="../openclrenderer/clstate.h" />
@@ -118,8 +116,6 @@
 		<Unit filename="../openclrenderer/texture.hpp" />
 		<Unit filename="../openclrenderer/texture_context.cpp" />
 		<Unit filename="../openclrenderer/texture_context.hpp" />
-		<Unit filename="../openclrenderer/texture_manager.cpp" />
-		<Unit filename="../openclrenderer/texture_manager.hpp" />
 		<Unit filename="../openclrenderer/triangle.cpp" />
 		<Unit filename="../openclrenderer/triangle.hpp" />
 		<Unit filename="../openclrenderer/ui_manager.cpp" />
