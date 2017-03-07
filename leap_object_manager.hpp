@@ -68,7 +68,8 @@ struct leap_object_manager
         return ret;
     }
 
-    void tick()
+    ///need to be able to scale down the entire thing
+    void tick(float dynamic_scale = 1.f)
     {
         ///hand_history not interpolated, but hand_map is
         ///this may cause some of the jitteryness. Try experimenting with this
@@ -99,8 +100,24 @@ struct leap_object_manager
         ///bones.size() strictly <= objects.size()
         for(int i=0; i<bones.size(); i++)
         {
-            objects[i].ctr->set_pos(conv_implicit<cl_float4>(bones[i].pos));
+            leap_object* lobj = get_leap_object(bones[i].hand_id, 2, 0);
+
+            vec3f middle_of_hand = {0,0,0};
+
+            if(lobj)
+                middle_of_hand = lobj->current_positional.pos;
+
+            vec3f cpos = bones[i].pos;
+
+            vec3f middle_to_outside = cpos - middle_of_hand;
+
+            middle_to_outside = middle_to_outside * dynamic_scale;
+
+            vec3f final_pos = middle_to_outside + middle_of_hand;
+
+            objects[i].ctr->set_pos(conv_implicit<cl_float4>(final_pos));
             objects[i].ctr->set_rot_quat(bones[i].rot);
+            objects[i].ctr->set_dynamic_scale(scale * dynamic_scale);
 
             objects[i].current_positional = bones[i];
         }

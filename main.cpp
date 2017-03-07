@@ -92,6 +92,10 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D LEAP");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
+    objects_container* sword = context.make_new();
+    sword->set_file("../Sword/Res/sword_red.obj");
+    sword->set_active(true);
+
     //window.set_camera_pos({0, 108, -169});
 
     //rerr: 37.9796 290.584 -255.681
@@ -104,6 +108,8 @@ int main(int argc, char *argv[])
 
     ///we need a context.unload_inactive
     context.load_active();
+
+    sword->set_dynamic_scale(50.f);
 
     //sponza->scale(10.f);
     //sponza->set_specular(0.f);
@@ -174,7 +180,7 @@ int main(int argc, char *argv[])
         //for()
 
         leap.tick(0);
-        leap_object_spawner.tick();
+        leap_object_spawner.tick(0.6f);
 
 
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
@@ -216,6 +222,39 @@ int main(int argc, char *argv[])
                 o.ctr->set_rot_quat(fin_quat);
             }
         }*/
+
+        leap_object* left = leap_object_spawner.get_hand(eLeapHandType_Left, 2, 0);
+
+        if(left)
+        {
+            objects_container* ctr = left->ctr;
+
+            vec4f AA = {1, 0, 0, M_PI/2};
+
+            quat q;
+            q.load_from_axis_angle(AA);
+
+            vec4f AA_2 = {0, 1, 0, M_PI/2 - M_PI/16};
+
+            quat q2;
+            q2.load_from_axis_angle(AA_2);
+
+            mat3f rmat = ctr->rot_quat.get_rotation_matrix() * q2.get_rotation_matrix() * q.get_rotation_matrix();
+
+            quat rquat;
+            rquat.load_from_matrix(rmat);
+
+            vec3f offset = {0, -1, 0};
+            vec3f zoffset = {1, 0, 0};
+
+            offset = ctr->rot_quat.get_rotation_matrix() * offset;
+            zoffset = ctr->rot_quat.get_rotation_matrix() * zoffset;
+
+            vec3f roffset = xyz_to_vec(ctr->pos) + offset * 20.f + zoffset * 5;
+
+            sword->set_pos(conv_implicit<cl_float4>(roffset));
+            sword->set_rot_quat(rquat);
+        }
 
         context.flush_locations();
 
