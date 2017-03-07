@@ -221,12 +221,14 @@ struct leap_motion_replay
 
         float ctime = get_time_s();
 
+        //lg::log("CTIME ", ctime, " FTIME ", first_frame_time_s, " STIME ", second_frame_time_s);
+
         return (ctime - first_frame_time_s) / (second_frame_time_s - first_frame_time_s);
     }
 
     void conditionally_advance_frame()
     {
-        if(should_advance_frame() && (last_frame + 1 < mocap.data.size()))
+        while(should_advance_frame() && (last_frame + 1 < mocap.data.size()))
         {
             last_frame++;
         }
@@ -427,6 +429,8 @@ struct leap_motion_capture_manager
         {
             if(currently_replaying[i].replay.finished())
             {
+                lg::log("End replay");
+
                 currently_replaying.erase(currently_replaying.begin() + i);
                 i--;
                 continue;
@@ -435,8 +439,8 @@ struct leap_motion_capture_manager
 
         for(current_replay& replay : currently_replaying)
         {
-            replay.replay.position_containers(replay.containers);
             replay.replay.conditionally_advance_frame();
+            replay.replay.position_containers(replay.containers);
         }
     }
 
@@ -483,7 +487,9 @@ struct leap_motion_capture_manager
 
             ImGui::SameLine();
 
-            if(ImGui::Button("Begin Playback"))
+            std::string button_id_str = std::string("Begin Playback") + std::string("##REKDAGAIN") + std::to_string(i);
+
+            if(ImGui::Button(button_id_str.c_str()))
             {
                 start_replay(i, ctrs);
             }
@@ -648,7 +654,13 @@ int main(int argc, char *argv[])
         leap_object_spawner.tick(0.6f);
 
         capture_manager.tick_replays();
-        capture_manager.set_capture_data(leap.hand_map);
+
+        std::map<uint32_t, LEAP_HAND> this_hand;
+
+        if(leap.hand_history.size() > 0)
+            this_hand = leap.hand_history.back();
+
+        capture_manager.set_capture_data(this_hand);
 
 
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
