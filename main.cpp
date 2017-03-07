@@ -94,7 +94,7 @@ struct JHAND
     JDIGIT digits[5];
 };
 
-JHAND leap_hand_to_engine(LEAP_HAND& hand)
+JHAND leap_hand_to_engine(const LEAP_HAND& hand)
 {
     uint32_t hid = hand.id;
 
@@ -112,11 +112,16 @@ JHAND leap_hand_to_engine(LEAP_HAND& hand)
         {
             LEAP_BONE b1 = dig1.bones[bone_id];
 
-            jhand.digits[digit_id].bones[bone_id].next_joint = xyz_to_vec(b1.next_joint);
-            jhand.digits[digit_id].bones[bone_id].prev_joint = xyz_to_vec(b1.prev_joint);
+            JBONE& jb = jhand.digits[digit_id].bones[bone_id];
 
-            jhand.digits[digit_id].bones[bone_id].width = b1.width;
-            jhand.digits[digit_id].bones[bone_id].rotation = convert_from_leap_quaternion(b1.rotation);
+            jb.next_joint = xyz_to_vec(b1.next_joint);
+            jb.prev_joint = xyz_to_vec(b1.prev_joint);
+
+            jb.next_joint.v[2] = -jb.next_joint.v[2];
+            jb.prev_joint.v[2] = -jb.prev_joint.v[2];
+
+            jb.width = b1.width;
+            jb.rotation = convert_from_leap_quaternion(b1.rotation);
         }
     }
 
@@ -141,11 +146,16 @@ struct leap_motion_capture_data
         clk.restart();
     }
 
-    void save_frame(const std::map<uint32_t, LEAP_HAND>& dat)
+    void save_frame(std::map<uint32_t, LEAP_HAND>& dat)
     {
         leap_motion_capture_frame frame;
 
-        //frame.frame_data = dat;
+        //frame.frame_data = leap_hand_to_engine(dat);
+        for(auto& i : dat)
+        {
+            frame.frame_data[i.first] = leap_hand_to_engine(dat[i.first]);
+        }
+
         frame.time_s = (clk.getElapsedTime().asMicroseconds() / 1000.f) / 1000.f;
 
         data.push_back(frame);
@@ -224,7 +234,7 @@ struct leap_motion_replay
 
     bool finished()
     {
-        return last_frame == mocap.data.size()-1;
+        return last_frame >= mocap.data.size()-1;
     }
 
     JBONE interpolate_bones(JBONE b1, JBONE b2, float a)
@@ -305,11 +315,13 @@ struct leap_motion_replay
 
         int cid = 0;
 
+        //lg::log(frame.frame_data.size());
+
         for(auto& hands : frame.frame_data)
         {
             uint32_t hid = hands.first;
 
-            for(int digit_id = 0; digit_id < 5; digit_id)
+            for(int digit_id = 0; digit_id < 5; digit_id++)
             {
                 JDIGIT dig = frame.frame_data[hid].digits[digit_id];
 
@@ -319,10 +331,18 @@ struct leap_motion_replay
 
                     //int id = hid * 5 * 4 + digit_id * 4 + bone_id;
 
+                    if(cid >= containers.size())
+                    {
+                        lg::log("NOT ENOUGH CONTAINERS FOR HAND DIGIT/BONES CONUNDRUM");
+                        return;
+                    }
+
                     objects_container* ctr = containers[cid];
 
                     ctr->set_pos({bone.get_pos().x(), bone.get_pos().y(), bone.get_pos().z()});
                     ctr->set_rot_quat(bone.rotation);
+
+                    //lg::log(bone.get_pos().x(), bone.get_pos().y(), bone.get_pos().z());
 
                     cid++;
                 }
@@ -348,7 +368,7 @@ struct leap_motion_capture_manager
 
     std::vector<current_replay> currently_replaying;
 
-    bool going = true;
+    bool going = false;
 
     void add_capture(const leap_motion_capture_data& capture)
     {
@@ -367,7 +387,7 @@ struct leap_motion_capture_manager
         going = true;
     }
 
-    void set_capture_data(const std::map<uint32_t, LEAP_HAND>& hands)
+    void set_capture_data(std::map<uint32_t, LEAP_HAND>& hands)
     {
         if(!going)
             return;
@@ -380,10 +400,14 @@ struct leap_motion_capture_manager
         if(going)
             add_capture(in_progress);
 
+        //leap_motion_replay& re = replays.back();
+
+        //lg::log(re.mocap.data.size());
+
         going = false;
     }
 
-    void replay_capture(int id, std::vector<objects_container*>& containers)
+    void start_replay(int id, std::vector<objects_container*>& containers)
     {
         current_replay replay;
 
@@ -393,6 +417,8 @@ struct leap_motion_capture_manager
         replay.replay.start_playblack();
 
         currently_replaying.push_back(replay);
+
+        //lg::log("START: ", currently_replaying.back().replay.mocap.data.size());
     }
 
     void tick_replays()
@@ -410,6 +436,32 @@ struct leap_motion_capture_manager
         for(current_replay& replay : currently_replaying)
         {
             replay.replay.position_containers(replay.containers);
+            replay.replay.conditionally_advance_frame();
+        }
+    }
+
+    object_context* ctx;
+
+    std::vector<objects_container*> ctrs;
+
+    float scale = 10.f;
+
+    void init_manual_containers(object_context& context)
+    {
+        ctx = &context;
+
+        for(int i=0; i<6 * 5 * 4; i++)
+        {
+            objects_container* ctr = ctx->make_new();
+
+            ctr->set_file("../openclrenderer/objects/high_cylinder_forward.obj");
+            ctr->set_active(true);
+
+            ctx->load_active();
+            ctr->set_dynamic_scale(scale);
+            ctx->build_request();
+
+            ctrs.push_back(ctr);
         }
     }
 
@@ -419,7 +471,42 @@ struct leap_motion_capture_manager
 
         for(int i=0; i<replays.size(); i++)
         {
+            leap_motion_replay& replay = replays[i];
 
+            int frames = replay.mocap.data.size();
+
+            int id = i;
+
+            std::string button_name = "ID: " + std::to_string(id) + " " + "Frames: " + std::to_string(frames);
+
+            ImGui::Button(button_name.c_str());
+
+            ImGui::SameLine();
+
+            if(ImGui::Button("Begin Playback"))
+            {
+                start_replay(i, ctrs);
+            }
+        }
+
+        if(replays.size() > 0)
+            ImGui::NewLine();
+
+        if(ImGui::Button("Start Capture"))
+        {
+            start_capture();
+        }
+
+        if(ImGui::Button("Stop Capture"))
+        {
+            finish_capture();
+        }
+
+        if(going)
+        {
+            std::string frame = "F: " + std::to_string(in_progress.data.size());
+
+            ImGui::Button(frame.c_str());
         }
 
         ImGui::End();
@@ -530,6 +617,9 @@ int main(int argc, char *argv[])
 
     leap_object_manager leap_object_spawner(&context, &leap);
 
+    leap_motion_capture_manager capture_manager;
+    capture_manager.init_manual_containers(context);
+
     ImGui::NewFrame();
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
@@ -554,8 +644,11 @@ int main(int argc, char *argv[])
         context.build_tick();
         context.flip();
 
-        leap.tick(0);
+        leap.tick(10);
         leap_object_spawner.tick(0.6f);
+
+        capture_manager.tick_replays();
+        capture_manager.set_capture_data(leap.hand_map);
 
 
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
@@ -648,9 +741,7 @@ int main(int argc, char *argv[])
 
         window.blit_to_screen(*context.fetch());
 
-        ImGui::Begin("Hello");
-
-        ImGui::End();
+        capture_manager.tick_ui();
 
         ImGui::Render();
         sf::Time t = sf::microseconds(window.get_frametime_ms() * 1000.f);
