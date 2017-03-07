@@ -72,6 +72,7 @@
 			<Add option="-lopenal32" />
 			<Add option="-logg" />
 			<Add option="-lleapC" />
+			<Add option="-lSDL2" />
 		</Linker>
 		<Unit filename="../openclrenderer/cl2.cl" />
 		<Unit filename="../openclrenderer/clstate.cpp" />
