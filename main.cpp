@@ -21,6 +21,10 @@
 #include "leap_object_manager.hpp"
 
 
+#include "../imgui/imgui.h"
+#include "../imgui/imgui-SFML.h"
+
+
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
 {
     std::vector<objects_container*> ctr;
@@ -92,6 +96,9 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D LEAP");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
+    ImGui::SFML::Init(window.window);
+
+
     objects_container* sword = context.make_new();
     sword->set_file("../Sword/Res/sword_red.obj");
     sword->set_active(true);
@@ -158,6 +165,8 @@ int main(int argc, char *argv[])
 
     leap_object_manager leap_object_spawner(&context, &leap);
 
+    ImGui::NewFrame();
+
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
     ///clSetEventCallback
@@ -167,8 +176,11 @@ int main(int argc, char *argv[])
 
         while(window.window.pollEvent(Event))
         {
+            ImGui::SFML::ProcessEvent(Event);
+
             if(Event.type == sf::Event::Closed)
                 window.window.close();
+
         }
 
 
@@ -176,8 +188,6 @@ int main(int argc, char *argv[])
 
         context.build_tick();
         context.flip();
-
-        //for()
 
         leap.tick(0);
         leap_object_spawner.tick(0.6f);
@@ -273,6 +283,16 @@ int main(int argc, char *argv[])
 
         window.blit_to_screen(*context.fetch());
 
+        ImGui::Begin("Hello");
+
+        ImGui::End();
+
+        ImGui::Render();
+        sf::Time t = sf::microseconds(window.get_frametime_ms() * 1000.f);
+        ImGui::SFML::Update(t);
+
+        window.window.resetGLStates();
+
         window.flip();
 
         window.render_block();
@@ -296,4 +316,6 @@ int main(int argc, char *argv[])
     cl::cqueue.finish();
     cl::cqueue2.finish();
     glFinish();
+
+    ImGui::SFML::Shutdown();
 }
