@@ -55,6 +55,7 @@
 			<Add option="-lBulletDynamics" />
 			<Add option="-lBulletCollision" />
 			<Add option="-lLinearMath" />
+			<Add option="-limgui" />
 			<Add option="-lsfml-graphics" />
 			<Add option="-lsfml-audio" />
 			<Add option="-lsfml-network" />
@@ -71,8 +72,10 @@
 			<Add option="-lflac" />
 			<Add option="-lopenal32" />
 			<Add option="-logg" />
-			<Add option="-lleapC" />
+			<Add option="-lmyo64" />
+			<Add option="-limm32" />
 			<Add option="-lSDL2" />
+			<Add option="-lleapC" />
 		</Linker>
 		<Unit filename="../openclrenderer/cl2.cl" />
 		<Unit filename="../openclrenderer/clstate.cpp" />

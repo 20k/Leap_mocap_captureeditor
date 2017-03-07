@@ -24,6 +24,7 @@
 #include "../imgui/imgui.h"
 #include "../imgui/imgui-SFML.h"
 #include <vec/vec.hpp>
+#include <fstream>
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -161,8 +162,6 @@ struct leap_motion_capture_data
         data.push_back(frame);
     }
 };
-
-
 
 ///include option to pad beginning and end frames for dynamic blending
 struct leap_motion_replay
@@ -515,7 +514,108 @@ struct leap_motion_capture_manager
             ImGui::Button(frame.c_str());
         }
 
+        if(ImGui::Button("Save"))
+        {
+            save("mocap/motion_capture_data");
+        }
+
+        if(ImGui::Button("Load"))
+        {
+            load("mocap/motion_capture_data");
+        }
+
         ImGui::End();
+    }
+
+    void save(const std::string& prefix)
+    {
+        for(int i=0; i<replays.size(); i++)
+        {
+            leap_motion_replay& replay = replays[i];
+
+            //FILE* pFile = fopen((prefix + std::to_string(i)).c_str(), "wb");
+
+            std::ofstream out(prefix + std::to_string(i), std::ofstream::binary);
+
+            int num = replay.mocap.data.size();
+
+            out.write((const char*)&num, sizeof(num));
+
+            for(int m = 0; m < replay.mocap.data.size(); m++)
+            {
+                leap_motion_capture_frame& frame = replay.mocap.data[m];
+
+                int num_hands = frame.frame_data.size();
+                float time_s = frame.time_s;
+
+                ///outfile.write (buffer,size);
+
+                out.write((const char*)&num_hands, sizeof(num_hands));
+                out.write((const char*)&time_s, sizeof(time_s));
+
+                for(auto& hands : frame.frame_data)
+                {
+                    out.write((const char*)&hands.first, sizeof(hands.first));
+                    out.write((const char*)&hands.second, sizeof(hands.second));
+                }
+            }
+        }
+    }
+
+    void load(const std::string& prefix)
+    {
+        int postfix = 0;
+
+        ///ok... dirty hack ;_; we should just use tinydir
+        ///remember, if we do this itll only work if files are actually named consecutively, and extras won't be gone
+        while(1)
+        {
+            std::string file = prefix + std::to_string(postfix);
+
+            std::ifstream in(file, std::ifstream::binary);
+
+            if(!in.good())
+                return;
+
+            int num;
+
+            in.read((char*)&num, sizeof(num));
+
+            leap_motion_capture_data data;
+
+            for(int i=0; i<num; i++)
+            {
+                leap_motion_capture_frame frame;
+
+                int num_hands;
+                float time_s;
+
+                in.read((char*)&num_hands, sizeof(num_hands));
+                in.read((char*)&time_s, sizeof(time_s));
+
+                std::map<uint32_t, JHAND> frame_data;
+
+                for(int i=0; i<num_hands; i++)
+                {
+                    uint32_t hand_id;
+                    JHAND hand;
+
+                    in.read((char*)&hand_id, sizeof(hand_id));
+                    in.read((char*)&hand, sizeof(hand));
+
+                    frame_data[hand_id] = hand;
+                }
+
+                frame.frame_data = frame_data;
+                frame.time_s = time_s;
+
+                data.data.push_back(frame);
+            }
+
+            add_capture(data);
+
+            postfix++;
+        }
     }
 };
 
