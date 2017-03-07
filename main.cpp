@@ -5,13 +5,6 @@
 #include <atomic>
 #include <mutex>
 
-#include "BasicExample.h"
-
-#include "CommonExampleInterface.h"
-#include "CommonGUIHelperInterface.h"
-#include <LinearMath/btTransform.h>
-#include "CommonRigidBodyBase.h"
-
 
 ///todo eventually
 ///split into dynamic and static objects
@@ -26,10 +19,6 @@
 #include "leap_motion.hpp"
 #include "bbox.hpp"
 #include "leap_object_manager.hpp"
-#include "grabbables.hpp"
-#include "physics_object_manager.hpp"
-#include "hand_firer.hpp"
-#include "hand_to_hand_interact.hpp"
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -92,19 +81,6 @@ int main(int argc, char *argv[])
     object_context context;
     context.set_clear_colour({0.25, 0.25, 0.25});
 
-    object_context transparency_context;
-    transparency_context.set_clear_colour({0,0,0});
-
-    object_context transparency_context2;
-    transparency_context2.set_clear_colour({0,0,0});
-
-    objects_container* sponza = context.make_new();
-    sponza->set_file("../openclrenderer/objects/cube.obj");
-    //sponza->set_load_cube_blank({10, 10, 10});
-
-    sponza->set_active(true);
-
-
     //sponza->hide();
 
     engine window;
@@ -116,7 +92,13 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D LEAP");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
 
-    window.set_camera_pos({0, 108, -169});
+    //window.set_camera_pos({0, 108, -169});
+
+    //rerr: 37.9796 290.584 -255.681
+    //rotation: 0.359276 0 0
+
+    window.set_camera_pos({37.9796, 290.584, -255.681});
+    window.set_camera_rot({0.359276, 0, 0});
 
     //window.set_camera_pos((cl_float4){-800,150,-570});
 
@@ -166,36 +148,9 @@ int main(int argc, char *argv[])
     float avg_ftime = 6000;
 
     leap_motion leap;
-    leap.enable_images(transparency_context, transparency_context2);
+    //leap.enable_images(transparency_context, transparency_context2);
 
-    //spawn_cubes(context, grab_manager);
-
-	DummyGUIHelper noGfx;
-
-	CommonExampleOptions options(&noGfx);
-	CommonRigidBodyBase*    example = BasicExampleCreateFunc(options);
-
-	example->initPhysics();
-
-    leap_object_manager leap_object_spawner(&context, &leap, example);
-
-    grabbable_manager grab_manager;
-    grab_manager.init(&leap, example, &leap_object_spawner);
-
-	physics_object_manager phys(&context, example->getBodies(), example, &grab_manager);
-
-	hand_firer hand_fire;
-	hand_fire.init(&leap);
-
-	///dependencies are getting ridiculous, just pass a state between them?
-	hand_to_hand_interactor hand_to_hand;
-	hand_to_hand.init(&leap_object_spawner, &grab_manager, &leap, &context, example);
-
-	transparency_context.build(true);
-	transparency_context.flip();
-
-	transparency_context2.build(true);
-	transparency_context2.flip();
+    leap_object_manager leap_object_spawner(&context, &leap);
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
     ///asynchronous to actual bits n bobs
@@ -213,86 +168,67 @@ int main(int argc, char *argv[])
 
         compute::event event;
 
-        context.build_tick(true);
-        transparency_context.build_tick(true);
-        transparency_context2.build_tick(true);
+        context.build_tick();
         context.flip();
-        transparency_context.flip();
-        transparency_context2.flip();
+
+        //for()
+
+        leap.tick(0);
+        leap_object_spawner.tick();
+
+
+        /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
+
+        std::vector<uint32_t> hand_ids = leap.get_hand_ids();
+
+        for(uint32_t id : hand_ids)
+        {
+            std::vector<leap_object> objs = leap_object_spawner.get_hand_objects(id);
+
+            leap_object* middle_finger = leap_object_spawner.get_leap_object(id, 2, 0);
+
+            if(!middle_finger)
+            {
+                lg::log("NO MIDDLE");
+                continue;
+            }
+
+            vec3f base_pos = middle_finger->current_positional.pos;
+            quat  base_rot = middle_finger->current_positional.rot;
+
+            for(leap_object& o : objs)
+            {
+                vec3f cpos = xyz_to_vec(o.ctr->pos);
+                quat  crot = o.ctr->rot_quat;
+
+                vec3f from_base = cpos - base_pos;
+
+                from_base = base_rot.get_rotation_matrix().transp() * from_base;
+
+                vec3f fin_pos = from_base + base_pos;
+
+                mat3f fin_mat = base_rot.get_rotation_matrix().transp() * crot.get_rotation_matrix();
+
+                quat fin_quat;
+                fin_quat.load_from_matrix(fin_mat);
+
+                o.ctr->set_pos(conv_implicit<cl_float4>(fin_pos));
+                o.ctr->set_rot_quat(fin_quat);
+            }
+        }*/
+
+        context.flush_locations();
 
         {
             ///do manual async on thread
             ///make a enforce_screensize method, rather than make these hackily do it
             window.generate_realtime_shadowing(*context.fetch());
             event = window.draw_bulk_objs_n(*context.fetch());
-            event = window.do_pseudo_aa();
-
-            //event = window.draw_bulk_objs_n(*transparency_context.fetch());
-            //event = window.draw_bulk_objs_n(*transparency_context2.fetch());
-
-            //event = window.blend_with_depth(*transparency_context.fetch(), *context.fetch());
-            //event = window.blend_with_depth(*transparency_context2.fetch(), *context.fetch());
-
-
-            //event = window.draw_godrays(*context.fetch());
-
-            window.increase_render_events();
+            //event = window.do_pseudo_aa();
 
             context.fetch()->swap_buffers();
-            transparency_context.fetch()->swap_buffers();
-            transparency_context2.fetch()->swap_buffers();
         }
 
-
-        example->stepSimulation(window.get_frametime_ms() / 1000.f);
-
-        example->tick();
-
-        leap.tick();
-        leap_object_spawner.tick();
-        leap_object_spawner.tick_image_processing();
-        phys.tick();
-        hand_fire.tick();
-        hand_to_hand.tick();
-        grab_manager.tick(window.get_frametime_ms());
-
-
-        context.flush_locations();
-        transparency_context.flush_locations();
-        transparency_context2.flush_locations();
-
-        std::vector<pvec> positions = hand_fire.get_fire_positions();
-
-        for(int i=0; i<positions.size(); i++)
-        {
-            pvec pv = positions[i];
-
-            vec3f p = pv.pos;
-            vec3f d = pv.dir;
-
-            float vel = 5000.f;
-
-            //printf("%f %f %f d\n", d.v[0], d.v[1], d.v[2]);
-
-            btTransform trans;
-
-            btQuaternion quat;
-            quat = quat.getIdentity();
-
-            trans.setRotation(quat);
-            trans.setOrigin({p.v[0], p.v[1], p.v[2]});
-
-            float scale = 20.f;
-
-            btBoxShape* colShape = example->createBoxShape(btVector3(scale,scale,scale));
-
-            btRigidBody* rigid = example->createRigidBody(0.1f, trans, colShape);
-            rigid->setLinearVelocity(btVector3(d.v[0], d.v[1], d.v[2]) * vel);
-
-            example->insertIntoVector(rigid);
-        }
-
-        //sponza->set_pos(conv_implicit<cl_float4>(leap.get_index_tip()));
 
         window.set_render_event(event);
 
@@ -315,9 +251,6 @@ int main(int argc, char *argv[])
         if(key.isKeyPressed(sf::Keyboard::F10))
             break;
     }
-
-    example->exitPhysics();
-    delete example;
 
     ///if we're doing async rendering on the main thread, then this is necessary
     window.render_block();

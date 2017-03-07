@@ -434,7 +434,7 @@ struct leap_motion
         ctr_2->set_pos({0,0,0});*/
     }
 
-    void tick()
+    void tick(float latency_ms = 0)
     {
         if(!device_init)
             return;
@@ -543,13 +543,14 @@ struct leap_motion
 
         //printf("pr %i %i\n", is_finished, new_frame_available);
 
+        ///microseconds
         int64_t now = LeapGetNow();
 
         //LeapUpdateRebase(*rebase, clk.getElapsedTime().asMicroseconds(), now);
         //LeapRebaseClock(*rebase, clk.getElapsedTime().asMicroseconds(), &now);
 
         ///-1000*10 is perfectly smooth, but higher latency obvs
-        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*0, pEvent, 99999);
+        eLeapRS res = LeapInterpolateFrame(connection, now - 1000*latency_ms, pEvent, 99999);
 
         if(res != eLeapRS_Success)
             printf("res %x\n", res);
@@ -609,6 +610,18 @@ struct leap_motion
         }
 
         return ret;
+    }
+
+    std::vector<uint32_t> get_hand_ids()
+    {
+        std::vector<uint32_t> ids;
+
+        for(auto& i : hand_map)
+        {
+            ids.push_back(i.first);
+        }
+
+        return ids;
     }
 
     quaternion transform_leap(quaternion q)
