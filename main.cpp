@@ -23,6 +23,7 @@
 
 #include "../imgui/imgui.h"
 #include "../imgui/imgui-SFML.h"
+#include <vec/vec.hpp>
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -60,6 +61,370 @@
         grab.add(i);
     }
 }*/
+
+struct JBONE
+{
+    vec3f prev_joint;
+    vec3f next_joint;
+
+    float width;
+
+    quat rotation;
+
+    vec3f get_pos()
+    {
+        return (prev_joint + next_joint)/2.f;
+    }
+};
+
+struct JDIGIT
+{
+    int32_t finger_id;
+
+    JBONE bones[4];
+};
+
+struct JHAND
+{
+    uint32_t id;
+
+    ///0 = left, 1 = right
+    int type = 0;
+
+    JDIGIT digits[5];
+};
+
+JHAND leap_hand_to_engine(LEAP_HAND& hand)
+{
+    uint32_t hid = hand.id;
+
+    JHAND jhand;
+    jhand.id = hand.id;
+    jhand.type = hand.type;
+
+    for(int digit_id = 0; digit_id < 5; digit_id++)
+    {
+        LEAP_DIGIT dig1 = hand.digits[digit_id];
+
+        jhand.digits[digit_id].finger_id = dig1.finger_id;
+
+        for(int bone_id = 0; bone_id < 4; bone_id++)
+        {
+            LEAP_BONE b1 = dig1.bones[bone_id];
+
+            jhand.digits[digit_id].bones[bone_id].next_joint = xyz_to_vec(b1.next_joint);
+            jhand.digits[digit_id].bones[bone_id].prev_joint = xyz_to_vec(b1.prev_joint);
+
+            jhand.digits[digit_id].bones[bone_id].width = b1.width;
+            jhand.digits[digit_id].bones[bone_id].rotation = convert_from_leap_quaternion(b1.rotation);
+        }
+    }
+
+    return jhand;
+}
+
+struct leap_motion_capture_frame
+{
+    float time_s = 0.f;
+
+    std::map<uint32_t, JHAND> frame_data;
+};
+
+struct leap_motion_capture_data
+{
+    std::vector<leap_motion_capture_frame> data;
+
+    sf::Clock clk;
+
+    void start_capture()
+    {
+        clk.restart();
+    }
+
+    void save_frame(const std::map<uint32_t, LEAP_HAND>& dat)
+    {
+        leap_motion_capture_frame frame;
+
+        //frame.frame_data = dat;
+        frame.time_s = (clk.getElapsedTime().asMicroseconds() / 1000.f) / 1000.f;
+
+        data.push_back(frame);
+    }
+};
+
+
+
+///include option to pad beginning and end frames for dynamic blending
+struct leap_motion_replay
+{
+    leap_motion_capture_data mocap;
+
+    sf::Clock clk;
+    bool going = false;
+    int last_frame = 0; ///INTERNAL frame
+
+    void set_replay_data(const leap_motion_capture_data& dat)
+    {
+        mocap = dat;
+    }
+
+    void start_playblack()
+    {
+        clk.restart();
+        going = true;
+        last_frame = 0;
+    }
+
+    float get_time_s()
+    {
+        return (clk.getElapsedTime().asMicroseconds() / 1000.f) / 1000.f;
+    }
+
+    leap_motion_capture_frame get_current_frame()
+    {
+        return mocap.data[last_frame];
+    }
+
+    leap_motion_capture_frame get_next_frame()
+    {
+        if(last_frame + 1 >= mocap.data.size())
+            return mocap.data[last_frame];
+
+        return mocap.data[last_frame + 1];
+    }
+
+    bool should_advance_frame()
+    {
+        leap_motion_capture_frame next_frame = get_next_frame();
+
+        if(get_time_s() >= next_frame.time_s)
+            return true;
+
+        return false;
+    }
+
+    ///0 = closest to current frame, 1 = closest to next frame
+    float get_frame_frac()
+    {
+        float first_frame_time_s = get_current_frame().time_s;
+        float second_frame_time_s = get_next_frame().time_s;
+
+        float ctime = get_time_s();
+
+        return (ctime - first_frame_time_s) / (second_frame_time_s - first_frame_time_s);
+    }
+
+    void conditionally_advance_frame()
+    {
+        if(should_advance_frame() && (last_frame + 1 < mocap.data.size()))
+        {
+            last_frame++;
+        }
+    }
+
+    bool finished()
+    {
+        return last_frame == mocap.data.size()-1;
+    }
+
+    JBONE interpolate_bones(JBONE b1, JBONE b2, float a)
+    {
+        JBONE ret = b1;
+
+        vec3f p1 = b1.prev_joint;
+        vec3f p2 = b2.prev_joint;
+
+        vec3f n1 = b1.next_joint;
+        vec3f n2 = b2.next_joint;
+
+        float w1 = b1.width;
+        float w2 = b2.width;
+
+        quat q1 = b1.rotation;
+        quat q2 = b2.rotation;
+
+        vec3f rn = n1 * a + n2 * (1.f - a);
+        vec3f rp = p1 * a + p2 * (1.f - a);
+
+        float rw = w1 * a + w2 * (1.f - a);
+
+        quat rq = quat::slerp(q1, q2, a);
+
+        ret.prev_joint = rn;
+        ret.next_joint = rp;
+
+        ret.width = rw;
+
+        ret.rotation = rq;
+
+        return ret;
+    }
+
+    leap_motion_capture_frame get_interpolated_frame()
+    {
+        leap_motion_capture_frame cur = get_current_frame();
+        leap_motion_capture_frame next = get_next_frame();
+
+        leap_motion_capture_frame ret;
+
+        ret.time_s = get_time_s();
+
+        float frac = get_frame_frac();
+        float interpolate_frac = 1.f - frac;
+
+        ///uint32_t, LEAP_HAND
+        for(auto& hands : cur.frame_data)
+        {
+            uint32_t hid = hands.first;
+
+            for(int digit_id = 0; digit_id < 5; digit_id++)
+            {
+                JDIGIT dig1 = cur.frame_data[hid].digits[digit_id];
+                JDIGIT dig2 = next.frame_data[hid].digits[digit_id];
+
+                for(int bone_id = 0; bone_id < 4; bone_id++)
+                {
+                    JBONE b1 = dig1.bones[bone_id];
+                    JBONE b2 = dig2.bones[bone_id];
+
+                    JBONE bi = interpolate_bones(b1, b2, interpolate_frac);
+
+                    ret.frame_data[hid].digits[digit_id].bones[bone_id] = bi;
+                }
+            }
+        }
+
+        return ret;
+    }
+
+    void position_containers(std::vector<objects_container*>& containers)
+    {
+        leap_motion_capture_frame frame = get_interpolated_frame();
+
+        int nhand = 0;
+
+        int cid = 0;
+
+        for(auto& hands : frame.frame_data)
+        {
+            uint32_t hid = hands.first;
+
+            for(int digit_id = 0; digit_id < 5; digit_id)
+            {
+                JDIGIT dig = frame.frame_data[hid].digits[digit_id];
+
+                for(int bone_id = 0; bone_id < 4; bone_id++)
+                {
+                    JBONE bone = dig.bones[bone_id];
+
+                    //int id = hid * 5 * 4 + digit_id * 4 + bone_id;
+
+                    objects_container* ctr = containers[cid];
+
+                    ctr->set_pos({bone.get_pos().x(), bone.get_pos().y(), bone.get_pos().z()});
+                    ctr->set_rot_quat(bone.rotation);
+
+                    cid++;
+                }
+            }
+
+            nhand++;
+        }
+    }
+};
+
+struct current_replay
+{
+    std::vector<objects_container*> containers;
+    leap_motion_replay replay;
+};
+
+struct leap_motion_capture_manager
+{
+    std::vector<leap_motion_replay> replays;
+
+    ///in progress capture
+    leap_motion_capture_data in_progress;
+
+    std::vector<current_replay> currently_replaying;
+
+    bool going = true;
+
+    void add_capture(const leap_motion_capture_data& capture)
+    {
+        leap_motion_replay new_replay;
+
+        new_replay.set_replay_data(capture);
+
+        replays.push_back(new_replay);
+    }
+
+    void start_capture()
+    {
+        in_progress = leap_motion_capture_data();
+        in_progress.start_capture();
+
+        going = true;
+    }
+
+    void set_capture_data(const std::map<uint32_t, LEAP_HAND>& hands)
+    {
+        if(!going)
+            return;
+
+        in_progress.save_frame(hands);
+    }
+
+    void finish_capture()
+    {
+        if(going)
+            add_capture(in_progress);
+
+        going = false;
+    }
+
+    void replay_capture(int id, std::vector<objects_container*>& containers)
+    {
+        current_replay replay;
+
+        replay.containers = containers;
+        replay.replay = replays[id];
+
+        replay.replay.start_playblack();
+
+        currently_replaying.push_back(replay);
+    }
+
+    void tick_replays()
+    {
+        for(int i=0; i<currently_replaying.size(); i++)
+        {
+            if(currently_replaying[i].replay.finished())
+            {
+                currently_replaying.erase(currently_replaying.begin() + i);
+                i--;
+                continue;
+            }
+        }
+
+        for(current_replay& replay : currently_replaying)
+        {
+            replay.replay.position_containers(replay.containers);
+        }
+    }
+
+    void tick_ui()
+    {
+        ImGui::Begin("Capture Manager");
+
+        for(int i=0; i<replays.size(); i++)
+        {
+
+        }
+
+        ImGui::End();
+    }
+};
 
 ///move light down and to the side for specular
 ///2 hands -> shotgun <-- second
