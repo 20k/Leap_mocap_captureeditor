@@ -311,6 +311,9 @@ int main(int argc, char *argv[])
 
         if(key.isKeyPressed(sf::Keyboard::Comma))
             std::cout << avg_ftime << std::endl;
+
+        if(key.isKeyPressed(sf::Keyboard::F10))
+            break;
     }
 
     example->exitPhysics();
