@@ -1,13 +1,13 @@
-#ifndef BBOX_HPP_INCLUDED
-#define BBOX_HPP_INCLUDED
+#ifndef BBOX_CRAP_HPP_INCLUDED
+#define BBOX_CRAP_HPP_INCLUDED
 
-struct bbox
+struct bbox_leap
 {
     vec3f min;
     vec3f max;
 };
 
-bool within(bbox& b, vec3f test_relative, float fudge = 0.f)
+bool within(bbox_leap& b, vec3f test_relative, float fudge = 0.f)
 {
     for(int i=0; i<3; i++)
         if(test_relative.v[i] < b.min.v[i] - fudge) ///lower than minimum point, not inside cube
@@ -21,7 +21,7 @@ bool within(bbox& b, vec3f test_relative, float fudge = 0.f)
     return true;
 }
 
-bbox get_bbox(objects_container* obj)
+bbox_leap get_bbox_im_not_even_using_this_anymore(objects_container* obj)
 {
     vec3f tl = {FLT_MAX, FLT_MAX, FLT_MAX}, br = {FLT_MIN, FLT_MIN, FLT_MIN};
 
@@ -43,4 +43,4 @@ bbox get_bbox(objects_container* obj)
 }
 
 
-#endif // BBOX_HPP_INCLUDED
+#endif // BBOX_CRAP_HPP_INCLUDED

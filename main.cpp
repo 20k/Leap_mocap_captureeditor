@@ -25,6 +25,9 @@
 #include "../imgui/imgui-SFML.h"
 #include <vec/vec.hpp>
 #include <fstream>
+#include "../Sword/fighter.hpp"
+#include "../Sword/physics.hpp"
+#include "../Sword/map_tools.hpp"
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -492,6 +495,15 @@ struct leap_motion_capture_manager
             {
                 start_replay(i, ctrs);
             }
+
+            std::string delete_id_str = std::string("Delete") + std::string("#fdfdfdf") + std::to_string(i);
+
+            if(ImGui::Button(delete_id_str.c_str()))
+            {
+                replays.erase(replays.begin() + i);
+                i--;
+                continue;
+            }
         }
 
         if(replays.size() > 0)
@@ -656,10 +668,38 @@ int main(int argc, char *argv[])
 
     ImGui::SFML::Init(window.window);
 
+    physics phys;
+    phys.load();
+
+    polygonal_world_map polygonal_map;
+    polygonal_map.init(context, "../Sword/Res/poly_maps/midmap_1.txt");
+
+    context.load_active();
+    context.build(true);
+
+    polygonal_map.level_floor->set_active(false);
+
+    for(auto& i : polygonal_map.other_objects)
+    {
+        i->set_active(false);
+    }
+
+    context.build(true);
+
+    world_collision_handler collision_handler;
+    collision_handler.set_map(polygonal_map);
+
+    object_context transparency_context;
+
+    fighter* fight = new fighter(context);
+
+    init_fighter(fight, &phys, 1, &collision_handler, context, transparency_context, "poo", true);
+
 
     objects_container* sword = context.make_new();
     sword->set_file("../Sword/Res/sword_red.obj");
     sword->set_active(true);
+    sword->hide();
 
     //window.set_camera_pos({0, 108, -169});
 
@@ -804,8 +844,9 @@ int main(int argc, char *argv[])
         }*/
 
         leap_object* left = leap_object_spawner.get_hand(eLeapHandType_Left, 2, 0);
+        leap_object* right = leap_object_spawner.get_hand(eLeapHandType_Right, 2, 0);
 
-        if(left)
+        /*if(left)
         {
             objects_container* ctr = left->ctr;
 
@@ -834,7 +875,75 @@ int main(int argc, char *argv[])
 
             sword->set_pos(conv_implicit<cl_float4>(roffset));
             sword->set_rot_quat(rquat);
+        }*/
+
+        fight->tick(true);
+        fight->pos.v[1] = 200.f;
+        fight->pos.v[2] = -100;
+        fight->rot.v[1] = M_PI;
+
+        fight->look_displacement = {0,0,0};
+
+        if(left)
+        {
+            //fight->focus_pos.z() = fight->focus_pos.z() - 50.f;
+
+            fight->override_rhand_pos((xyz_to_vec(left->ctr->pos) - fight->pos).back_rot(0.f, fight->rot));
         }
+
+        if(right)
+        {
+            fight->focus_pos = (xyz_to_vec(right->ctr->pos) - fight->pos).back_rot(0.f, fight->rot);
+        }
+
+        fight->update_render_positions();
+        fight->update_lights();
+
+        if(left)
+        {
+            //fight->weapon.obj()->set_pos(left->ctr->pos);
+
+            objects_container* ctr = left->ctr;
+
+            objects_container* csword = fight->weapon.obj();
+
+            vec4f AA = {1, 0, 0, M_PI/2};
+
+            quat q;
+            q.load_from_axis_angle(AA);
+
+            vec4f AA_2 = {0, 1, 0, M_PI/2 - M_PI/16};
+
+            quat q2;
+            q2.load_from_axis_angle(AA_2);
+
+            mat3f rmat = ctr->rot_quat.get_rotation_matrix() * q2.get_rotation_matrix() * q.get_rotation_matrix();
+
+            quat rquat;
+            rquat.load_from_matrix(rmat);
+
+            vec3f offset = {0, -1, 0};
+            vec3f zoffset = {1, 0, 0};
+
+            offset = ctr->rot_quat.get_rotation_matrix() * offset;
+            zoffset = ctr->rot_quat.get_rotation_matrix() * zoffset;
+
+            vec3f roffset = xyz_to_vec(ctr->pos) + offset * 20.f + zoffset * 5;
+
+            csword->set_pos(conv_implicit<cl_float4>(roffset));
+            csword->set_rot_quat(rquat);
+        }
+
+        for(light* l : fight->my_lights)
+        {
+            l->set_active(false);
+        }
+
+        fight->parts[bodypart::LHAND].obj()->hide();
+        fight->parts[bodypart::RHAND].obj()->hide();
+
+        light_data = light::build(&light_data);
+        window.set_light_data(light_data);
 
         context.flush_locations();
 
