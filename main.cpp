@@ -33,42 +33,6 @@
 #include "leap_motion_capture_management.hpp"
 
 
-/*void spawn_cubes(object_context& context, grabbable_manager& grab)
-{
-    std::vector<objects_container*> ctr;
-
-    for(int i=0; i<20; i++)
-    {
-        for(int j=0; j<20; j++)
-        {
-            vec3f pos = {i, 200, j};
-
-            pos = pos * (vec3f){10, 1, 10};
-
-            objects_container* sponza = context.make_new();
-            sponza->set_file("../openclrenderer/objects/cube.obj");
-
-            sponza->set_active(true);
-
-            sponza->request_scale(4.f);
-
-            sponza->set_pos(conv_implicit<cl_float4>(pos));
-
-            sponza->cache = false;
-
-            ctr.push_back(sponza);
-        }
-    }
-
-    context.load_active();
-    context.build_request();
-
-    for(auto& i : ctr)
-    {
-        grab.add(i);
-    }
-}*/
-
 ///move light down and to the side for specular
 ///2 hands -> shotgun <-- second
 ///turn stretched finger into pole <-- first
