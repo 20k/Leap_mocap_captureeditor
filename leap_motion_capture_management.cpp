@@ -211,6 +211,9 @@ void leap_motion_capture_manager::set_capture_data(std::map<uint32_t, LEAP_HAND>
         return;
 
     in_progress.save_frame(hands);
+
+    if(snap)
+        finish_capture();
 }
 
 void leap_motion_capture_manager::finish_capture()
@@ -223,6 +226,14 @@ void leap_motion_capture_manager::finish_capture()
     //lg::log(re.mocap.data.size());
 
     going = false;
+    snap = false;
+}
+
+void leap_motion_capture_manager::snap_one_frame_capture()
+{
+    snap = true;
+
+    start_capture();
 }
 
 void leap_motion_capture_manager::start_replay(int id, std::vector<objects_container*>& containers)
@@ -333,6 +344,11 @@ void leap_motion_capture_manager::tick_ui()
         std::string frame = "F: " + std::to_string(in_progress.data.size());
 
         ImGui::Button(frame.c_str());
+    }
+
+    if(ImGui::Button("Snap Capture"))
+    {
+        snap_one_frame_capture();
     }
 
     if(ImGui::Button("Save"))

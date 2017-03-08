@@ -7,6 +7,7 @@
 #include <map>
 #include <SFML/System.hpp>
 #include <leap/leapC.h>
+#include "../openclrenderer/objects_container.hpp"
 
 struct objects_container;
 struct object_context;
@@ -159,12 +160,16 @@ struct leap_motion_capture_manager
     std::vector<current_replay> currently_replaying;
 
     bool going = false;
+    bool snap = false;
 
     void add_capture(const leap_motion_capture_data& capture);
     void start_capture();
 
     void set_capture_data(std::map<uint32_t, LEAP_HAND>& hands);
     void finish_capture();
+
+    void snap_one_frame_capture();
+
     void start_replay(int id, std::vector<objects_container*>& containers);
     void tick_replays();
 
@@ -182,6 +187,7 @@ struct leap_motion_capture_manager
     void load(const std::string& prefix);
 };
 
+///don't move, its vision is based on motion
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {

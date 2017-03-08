@@ -32,6 +32,11 @@
 
 #include "leap_motion_capture_management.hpp"
 
+struct mocap_animation_system
+{
+
+};
+
 
 ///move light down and to the side for specular
 ///2 hands -> shotgun <-- second
