@@ -28,6 +28,7 @@
 #include "../Sword/fighter.hpp"
 #include "../Sword/physics.hpp"
 #include "../Sword/map_tools.hpp"
+#include "../Sword/util.hpp"
 
 
 /*void spawn_cubes(object_context& context, grabbable_manager& grab)
@@ -666,14 +667,23 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 ctr_pos = ctr_pos + offset;
 
+                quat AA_0;
+                AA_0.load_from_axis_angle({1, 0, 0, M_PI/2});
+
                 quat AA_1;
-                AA_1.load_from_axis_angle({0, 1, 0, -M_PI/2 + M_PI/8});
+                AA_1.load_from_axis_angle({0, 1, 0, -M_PI/2});
 
                 quat AA_2;
-                AA_2.load_from_axis_angle({1, 0, 0, -M_PI/2});
+                AA_2.load_from_axis_angle({1, 0, 0, M_PI/2});
 
-                vec3f new_coordinate_system = AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
-                mat3f new_coordinate_matr = AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
+                quat AA_3;
+                AA_3.load_from_axis_angle({0, 0, 1, M_PI});
+
+                quat AA_4;
+                AA_4.load_from_axis_angle({0, 1, 0, M_PI/8});
+
+                vec3f new_coordinate_system = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() *  ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
+                mat3f new_coordinate_matr = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
 
                 quat new_coordinate_quat;
                 new_coordinate_quat.load_from_matrix(new_coordinate_matr);
@@ -681,19 +691,9 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 ctr_pos = new_coordinate_system;
                 ctr_rot = new_coordinate_quat;
 
-                /*vec3f hand_to_ctr = ctr_pos - hand_pos;
-                vec3f flat_hand_pos = hand_rot.get_rotation_matrix().transp() * hand_to_ctr + hand_pos;
-
-                mat3f flat_hand_matr = hand_rot.get_rotation_matrix().transp() * ctr_rot.get_rotation_matrix();
-
-                quat flat_hand_rot;
-                flat_hand_rot.load_from_matrix(flat_hand_matr);*/
-
-                //vec3f flat_hand_relative = flat_hand_pos - ctr_pos;
                 vec3f flat_hand_relative = ctr_pos - hand_pos;
 
                 vec3f sword_coordinates_pos = sword_rot.get_rotation_matrix() * flat_hand_relative + sword_pos;
-
 
                 mat3f sword_coordinates_matr = sword_rot.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
 
@@ -959,6 +959,11 @@ int main(int argc, char *argv[])
         }*/
         #endif
 
+        if(once<sf::Keyboard::F>())
+        {
+            fight->queue_attack(attacks::STAB);
+        }
+
         fight->tick(true);
         fight->pos.v[1] = 200.f;
         fight->pos.v[2] = -100;
@@ -1027,6 +1032,9 @@ int main(int argc, char *argv[])
 
         fight->parts[bodypart::LHAND].obj()->hide();
         fight->parts[bodypart::RHAND].obj()->hide();
+
+        fight->joint_links[1].obj->hide();
+        fight->joint_links[3].obj->hide();
 
         light_data = light::build(&light_data);
         window.set_light_data(light_data);
