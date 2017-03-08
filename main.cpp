@@ -311,7 +311,7 @@ struct leap_motion_replay
         return ret;
     }
 
-    void position_containers(std::vector<objects_container*>& containers)
+    leap_motion_capture_frame position_containers(std::vector<objects_container*>& containers)
     {
         leap_motion_capture_frame frame = get_interpolated_frame();
 
@@ -338,7 +338,7 @@ struct leap_motion_replay
                     if(cid >= containers.size())
                     {
                         lg::log("NOT ENOUGH CONTAINERS FOR HAND DIGIT/BONES CONUNDRUM");
-                        return;
+                        return frame;
                     }
 
                     objects_container* ctr = containers[cid];
@@ -354,6 +354,8 @@ struct leap_motion_replay
 
             nhand++;
         }
+
+        return frame;
     }
 };
 
@@ -361,6 +363,7 @@ struct current_replay
 {
     std::vector<objects_container*> containers;
     leap_motion_replay replay;
+    leap_motion_capture_frame last_interpolated;
 };
 
 struct leap_motion_capture_manager
@@ -442,7 +445,7 @@ struct leap_motion_capture_manager
         for(current_replay& replay : currently_replaying)
         {
             replay.replay.conditionally_advance_frame();
-            replay.replay.position_containers(replay.containers);
+            replay.last_interpolated = replay.replay.position_containers(replay.containers);
         }
     }
 
@@ -496,7 +499,7 @@ struct leap_motion_capture_manager
                 start_replay(i, ctrs);
             }
 
-            std::string delete_id_str = std::string("Delete") + std::string("#fdfdfdf") + std::to_string(i);
+            std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
 
             if(ImGui::Button(delete_id_str.c_str()))
             {
@@ -630,6 +633,57 @@ struct leap_motion_capture_manager
         }
     }
 };
+
+void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr)
+{
+    for(current_replay& replay : capture_manager.currently_replaying)
+    {
+        vec3f sword_pos = xyz_to_vec(sword_ctr->pos);
+        quat sword_rot = sword_ctr->rot_quat;
+
+        leap_motion_capture_frame frame = replay.last_interpolated;
+
+        int cid = 0;
+
+        for(auto& hand_data : frame.frame_data)
+        {
+            JHAND& hand = hand_data.second;
+
+            vec3f hand_pos = hand.digits[2].bones[0].get_pos();
+            quat hand_rot = hand.digits[2].bones[0].rotation;
+
+            for(int kk=0; kk < replay.containers.size(); kk++)
+            {
+                vec3f ctr_pos = xyz_to_vec(replay.containers[cid]->pos);
+                quat ctr_rot = replay.containers[cid]->rot_quat;
+
+                vec3f hand_to_ctr = ctr_pos - hand_pos;
+                vec3f flat_hand_pos = hand_rot.get_rotation_matrix().transp() * hand_to_ctr + hand_pos;
+
+                mat3f flat_hand_matr = hand_rot.get_rotation_matrix().transp() * ctr_rot.get_rotation_matrix();
+
+                quat flat_hand_rot;
+                flat_hand_rot.load_from_matrix(flat_hand_matr);
+
+                vec3f flat_hand_relative = flat_hand_pos - hand_pos;
+
+                vec3f sword_coordinates_pos = sword_rot.get_rotation_matrix() * flat_hand_relative + sword_pos;
+
+
+                mat3f sword_coordinates_matr = sword_rot.get_rotation_matrix() * flat_hand_rot.get_rotation_matrix();
+
+                quat sword_coordinates_rot;
+                sword_coordinates_rot.load_from_matrix(sword_coordinates_matr);
+
+
+                replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
+                replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
+
+                cid++;
+            }
+        }
+    }
+}
 
 ///move light down and to the side for specular
 ///2 hands -> shotgun <-- second
@@ -803,6 +857,7 @@ int main(int argc, char *argv[])
         capture_manager.set_capture_data(this_hand);
 
 
+        #if 0
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
 
         std::vector<uint32_t> hand_ids = leap.get_hand_ids();
@@ -876,6 +931,7 @@ int main(int argc, char *argv[])
             sword->set_pos(conv_implicit<cl_float4>(roffset));
             sword->set_rot_quat(rquat);
         }*/
+        #endif
 
         fight->tick(true);
         fight->pos.v[1] = 200.f;
@@ -884,10 +940,9 @@ int main(int argc, char *argv[])
 
         fight->look_displacement = {0,0,0};
 
+        #if 0
         if(left)
         {
-            //fight->focus_pos.z() = fight->focus_pos.z() - 50.f;
-
             fight->override_rhand_pos((xyz_to_vec(left->ctr->pos) - fight->pos).back_rot(0.f, fight->rot));
         }
 
@@ -895,10 +950,14 @@ int main(int argc, char *argv[])
         {
             fight->focus_pos = (xyz_to_vec(right->ctr->pos) - fight->pos).back_rot(0.f, fight->rot);
         }
+        #endif
 
         fight->update_render_positions();
         fight->update_lights();
 
+        attach_replays_to_fighter_sword(capture_manager, fight->weapon.obj());
+
+        #if 0
         if(left)
         {
             //fight->weapon.obj()->set_pos(left->ctr->pos);
@@ -933,6 +992,7 @@ int main(int argc, char *argv[])
             csword->set_pos(conv_implicit<cl_float4>(roffset));
             csword->set_rot_quat(rquat);
         }
+        #endif
 
         for(light* l : fight->my_lights)
         {
