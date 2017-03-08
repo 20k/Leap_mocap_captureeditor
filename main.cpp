@@ -634,7 +634,7 @@ struct leap_motion_capture_manager
     }
 };
 
-void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr)
+void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
     for(current_replay& replay : capture_manager.currently_replaying)
     {
@@ -657,20 +657,45 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 vec3f ctr_pos = xyz_to_vec(replay.containers[cid]->pos);
                 quat ctr_rot = replay.containers[cid]->rot_quat;
 
-                vec3f hand_to_ctr = ctr_pos - hand_pos;
+                ctr_pos = hand_rot.get_rotation_matrix().transp() * (ctr_pos - hand_pos) + hand_pos;
+
+                mat3f trot = hand_rot.get_rotation_matrix().transp() * ctr_rot.get_rotation_matrix();
+                ctr_rot.load_from_matrix(trot);
+
+                vec3f offset = {0, 25, -10};
+
+                ctr_pos = ctr_pos + offset;
+
+                quat AA_1;
+                AA_1.load_from_axis_angle({0, 1, 0, -M_PI/2 + M_PI/8});
+
+                quat AA_2;
+                AA_2.load_from_axis_angle({1, 0, 0, -M_PI/2});
+
+                vec3f new_coordinate_system = AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
+                mat3f new_coordinate_matr = AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
+
+                quat new_coordinate_quat;
+                new_coordinate_quat.load_from_matrix(new_coordinate_matr);
+
+                ctr_pos = new_coordinate_system;
+                ctr_rot = new_coordinate_quat;
+
+                /*vec3f hand_to_ctr = ctr_pos - hand_pos;
                 vec3f flat_hand_pos = hand_rot.get_rotation_matrix().transp() * hand_to_ctr + hand_pos;
 
                 mat3f flat_hand_matr = hand_rot.get_rotation_matrix().transp() * ctr_rot.get_rotation_matrix();
 
                 quat flat_hand_rot;
-                flat_hand_rot.load_from_matrix(flat_hand_matr);
+                flat_hand_rot.load_from_matrix(flat_hand_matr);*/
 
-                vec3f flat_hand_relative = flat_hand_pos - hand_pos;
+                //vec3f flat_hand_relative = flat_hand_pos - ctr_pos;
+                vec3f flat_hand_relative = ctr_pos - hand_pos;
 
                 vec3f sword_coordinates_pos = sword_rot.get_rotation_matrix() * flat_hand_relative + sword_pos;
 
 
-                mat3f sword_coordinates_matr = sword_rot.get_rotation_matrix() * flat_hand_rot.get_rotation_matrix();
+                mat3f sword_coordinates_matr = sword_rot.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
 
                 quat sword_coordinates_rot;
                 sword_coordinates_rot.load_from_matrix(sword_coordinates_matr);
@@ -678,6 +703,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
                 replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
+                replay.containers[cid]->set_dynamic_scale(dyn_scale * base_scale);
 
                 cid++;
             }
