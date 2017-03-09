@@ -236,7 +236,7 @@ void leap_motion_capture_manager::snap_one_frame_capture()
     start_capture();
 }
 
-void leap_motion_capture_manager::start_replay(int id, std::vector<objects_container*>& containers)
+int leap_motion_capture_manager::start_replay(int id, std::vector<objects_container*>& containers)
 {
     current_replay replay;
 
@@ -245,14 +245,22 @@ void leap_motion_capture_manager::start_replay(int id, std::vector<objects_conta
 
     replay.replay.start_playblack();
 
-    currently_replaying.push_back(replay);
+    int my_id = gid++;
+
+    //currently_replaying.push_back(replay);
+
+    currently_replaying_map[my_id] = replay;
 
     //lg::log("START: ", currently_replaying.back().replay.mocap.data.size());
+
+    return my_id;
 }
 
 void leap_motion_capture_manager::tick_replays()
 {
-    for(int i=0; i<currently_replaying.size(); i++)
+    std::vector<int> to_erase;
+
+    /*for(int i=0; i<currently_replaying.size(); i++)
     {
         if(currently_replaying[i].replay.finished())
         {
@@ -262,12 +270,26 @@ void leap_motion_capture_manager::tick_replays()
             i--;
             continue;
         }
+    }*/
+
+    for(auto& i : currently_replaying_map)
+    {
+        if(i.second.replay.finished())
+        {
+            to_erase.push_back(i.first);
+        }
     }
 
-    for(current_replay& replay : currently_replaying)
+    for(auto& i : to_erase)
     {
-        replay.replay.conditionally_advance_frame();
-        replay.last_interpolated = replay.replay.position_containers(replay.containers);
+        currently_replaying_map.erase(i);
+    }
+
+    //for(current_replay& replay : currently_replaying)
+    for(auto& replay : currently_replaying_map)
+    {
+        replay.second.replay.conditionally_advance_frame();
+        replay.second.last_interpolated = replay.second.replay.position_containers(replay.second.containers);
     }
 }
 

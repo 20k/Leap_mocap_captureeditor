@@ -157,7 +157,11 @@ struct leap_motion_capture_manager
     ///in progress capture
     leap_motion_capture_data in_progress;
 
-    std::vector<current_replay> currently_replaying;
+    int gid = 0;
+
+    std::map<int, current_replay> currently_replaying_map;
+
+    //std::vector<current_replay> currently_replaying;
 
     bool going = false;
     bool snap = false;
@@ -170,7 +174,7 @@ struct leap_motion_capture_manager
 
     void snap_one_frame_capture();
 
-    void start_replay(int id, std::vector<objects_container*>& containers);
+    int start_replay(int id, std::vector<objects_container*>& containers);
     void tick_replays();
 
     object_context* ctx;
@@ -191,8 +195,11 @@ struct leap_motion_capture_manager
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
-    for(current_replay& replay : capture_manager.currently_replaying)
+    //for(current_replay& replay : capture_manager.currently_replaying)
+    for(auto& rmap : capture_manager.currently_replaying_map)
     {
+        current_replay& replay = rmap.second;
+
         vec3f sword_pos = xyz_to_vec(sword_ctr->pos);
         quat sword_rot = sword_ctr->rot_quat;
 

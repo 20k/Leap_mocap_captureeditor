@@ -32,9 +32,152 @@
 
 #include "leap_motion_capture_management.hpp"
 
-struct mocap_animation_system
+struct mocap_animation
 {
+    bool going = false;
+    int current_replay = 0;
+    std::vector<int> replay_list;
+    int currently_going = 0;
 
+    void start(leap_motion_capture_manager* capture_manager)
+    {
+        current_replay = 0;
+        going = true;
+
+        /*leap_motion_replay& cur = capture_manager.replays[replay_list[current_replay]];
+
+        cur.start_playblack();*/
+
+        capture_manager->start_replay(replay_list.front(), capture_manager->ctrs);
+    }
+
+    void tick(leap_motion_capture_manager* capture_manager)
+    {
+        if(!going)
+            return;
+
+        leap_motion_replay& cur = capture_manager->replays[replay_list[current_replay]];
+
+        ///we may want to insert interpolation frames
+        ///we may want to merge all sub replays into a super replay for ease of interpolate
+        ///remember we'd have to patch up ftimes
+        if(cur.finished())
+        {
+            current_replay++;
+
+            if(current_replay >= replay_list.size())
+            {
+                going = false;
+                return;
+            }
+
+            //tick(capture_manager);
+
+            capture_manager->start_replay(current_replay, capture_manager->ctrs);
+        }
+    }
+
+    bool finished()
+    {
+        return !going;
+    }
+};
+
+struct mocap_animation_manager
+{
+    leap_motion_capture_manager* manager;
+
+    std::vector<mocap_animation> animations;
+    std::vector<mocap_animation> going_animations;
+
+    mocap_animation in_progress;
+
+    mocap_animation_manager(leap_motion_capture_manager* manage)
+    {
+        manager = manage;
+    }
+
+    /*void start_building_animation()
+    {
+        in_progress = mocap_animation();
+    }*/
+
+    void push_mocap_animation(int replay_id)
+    {
+        in_progress.replay_list.push_back(replay_id);
+    }
+
+    void finish_mocap_building_animation()
+    {
+        animations.push_back(in_progress);
+
+        in_progress = mocap_animation();
+    }
+
+    void start_animation(int id)
+    {
+        going_animations.push_back(animations[id]);
+
+        going_animations.back().start(manager);
+    }
+
+    void tick()
+    {
+        for(int i=0; i<going_animations.size(); i++)
+        {
+            mocap_animation& anim = going_animations[i];
+
+            if(anim.finished())
+            {
+                going_animations.erase(going_animations.begin() + i);
+
+                i--;
+
+                continue;
+            }
+
+            anim.tick(manager);
+        }
+    }
+
+    void tick_ui()
+    {
+        ImGui::Begin("Animation UI");
+
+        for(int i=0; i<animations.size(); i++)
+        {
+            std::string id = std::to_string(i);
+            std::string anim_length_str = std::to_string(animations[i].replay_list.size());
+
+            std::string button_id = "Launch: " + id + "(" + anim_length_str + ")";
+
+            if(ImGui::Button(button_id.c_str()))
+            {
+                start_animation(i);
+            }
+        }
+
+        for(int i=0; i<manager->replays.size(); i++)
+        {
+            leap_motion_replay& replay = manager->replays[i];
+
+            std::string id = std::to_string(i);
+
+            std::string add_id = "Add to current animation: " + id;
+
+            if(ImGui::Button(add_id.c_str()))
+            {
+                push_mocap_animation(i);
+            }
+        }
+
+        if(ImGui::Button("Finalise Animation"))
+        {
+            finish_mocap_building_animation();
+        }
+
+        ImGui::End();
+    }
 };
 
 
@@ -173,6 +316,8 @@ int main(int argc, char *argv[])
     leap_motion_capture_manager capture_manager;
     capture_manager.init_manual_containers(context);
 
+    mocap_animation_manager mocap_manager(&capture_manager);
+
     ImGui::NewFrame();
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
@@ -208,7 +353,7 @@ int main(int argc, char *argv[])
             this_hand = leap.hand_history.back();
 
         capture_manager.set_capture_data(this_hand);
-
+        mocap_manager.tick();
 
         #if 0
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
@@ -384,6 +529,7 @@ int main(int argc, char *argv[])
         window.blit_to_screen(*context.fetch());
 
         capture_manager.tick_ui();
+        mocap_manager.tick_ui();
 
         ImGui::Render();
         sf::Time t = sf::microseconds(window.get_frametime_ms() * 1000.f);
