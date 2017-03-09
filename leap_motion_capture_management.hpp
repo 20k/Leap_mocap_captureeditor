@@ -174,6 +174,7 @@ struct leap_motion_capture_manager
 
     void snap_one_frame_capture();
 
+    int start_external_replay(const leap_motion_replay& replay, std::vector<objects_container*>& containers);
     int start_replay(int id, std::vector<objects_container*>& containers);
     void tick_replays();
 

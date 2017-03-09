@@ -236,6 +236,22 @@ void leap_motion_capture_manager::snap_one_frame_capture()
     start_capture();
 }
 
+int leap_motion_capture_manager::start_external_replay(const leap_motion_replay& nreplay, std::vector<objects_container*>& containers)
+{
+    current_replay replay;
+
+    replay.containers = containers;
+    replay.replay = nreplay;
+
+    replay.replay.start_playblack();
+
+    int my_id = gid++;
+
+    currently_replaying_map[my_id] = replay;
+
+    return my_id;
+}
+
 int leap_motion_capture_manager::start_replay(int id, std::vector<objects_container*>& containers)
 {
     current_replay replay;
@@ -247,11 +263,7 @@ int leap_motion_capture_manager::start_replay(int id, std::vector<objects_contai
 
     int my_id = gid++;
 
-    //currently_replaying.push_back(replay);
-
     currently_replaying_map[my_id] = replay;
-
-    //lg::log("START: ", currently_replaying.back().replay.mocap.data.size());
 
     return my_id;
 }
