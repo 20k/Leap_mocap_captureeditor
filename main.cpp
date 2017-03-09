@@ -32,12 +32,40 @@
 
 #include "leap_motion_capture_management.hpp"
 
+///todays project: when we start an animation, actually mash all the underlying replays together and fire off a super replay
+///for correct blending etct
 struct mocap_animation
 {
     bool going = false;
     int current_replay = 0;
     std::vector<int> replay_list;
     int currently_going = 0;
+
+    leap_motion_replay merged_replay;
+
+    leap_motion_replay merge_replay(leap_motion_replay& start, leap_motion_replay& next)
+    {
+        leap_motion_replay ret = start;
+
+        ///these will need to be configurable
+        //int frames_of_padding = 1;
+        float animation_pad_time_s = 0.2f;
+
+        float finish_time_s = start.mocap.data.back().time_s;
+
+        float start_next_time = finish_time_s + animation_pad_time_s;
+
+        leap_motion_replay next_copy = next;
+
+        for(leap_motion_capture_frame& frame : next_copy.mocap.data)
+        {
+            frame.time_s += start_next_time;
+
+            ret.mocap.data.push_back(frame);
+        }
+
+        return ret;
+    }
 
     void start(leap_motion_capture_manager* capture_manager)
     {
@@ -47,14 +75,27 @@ struct mocap_animation
             return;
         }
 
+        merged_replay = capture_manager->replays[replay_list.front()];
+
         current_replay = 0;
         going = true;
 
-        /*leap_motion_replay& cur = capture_manager.replays[replay_list[current_replay]];
+        for(int i=1; i<replay_list.size(); i++)
+        {
+            int id = replay_list[i];
 
-        cur.start_playblack();*/
+            if(id >= capture_manager->replays.size())
+            {
+                lg::log("INVALID ID ", id);
+                return;
+            }
 
-        currently_going = capture_manager->start_replay(replay_list.front(), capture_manager->ctrs);
+            merged_replay = merge_replay(merged_replay, capture_manager->replays[replay_list[i]]);
+        }
+
+        //currently_going = capture_manager->start_replay(replay_list.front(), capture_manager->ctrs);
+
+        currently_going = capture_manager->start_external_replay(merged_replay, capture_manager->ctrs);
     }
 
     void tick(leap_motion_capture_manager* capture_manager)
@@ -71,7 +112,7 @@ struct mocap_animation
         {
             current_replay++;
 
-            if(current_replay >= replay_list.size())
+            /*if(current_replay >= replay_list.size())
             {
                 going = false;
                 return;
@@ -79,7 +120,9 @@ struct mocap_animation
 
             //tick(capture_manager);
 
-            currently_going = capture_manager->start_replay(replay_list[current_replay], capture_manager->ctrs);
+            currently_going = capture_manager->start_replay(replay_list[current_replay], capture_manager->ctrs);*/
+
+            return;
         }
     }
 

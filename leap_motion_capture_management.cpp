@@ -87,15 +87,15 @@ JBONE leap_motion_replay::interpolate_bones(JBONE b1, JBONE b2, float a)
     quat q1 = b1.rotation;
     quat q2 = b2.rotation;
 
-    vec3f rn = n1 * a + n2 * (1.f - a);
     vec3f rp = p1 * a + p2 * (1.f - a);
+    vec3f rn = n1 * a + n2 * (1.f - a);
 
     float rw = w1 * a + w2 * (1.f - a);
 
-    quat rq = quat::slerp(q1, q2, a);
+    quat rq = quat::slerp(q1, q2, 1.f - a);
 
-    ret.prev_joint = rn;
-    ret.next_joint = rp;
+    ret.prev_joint = rp;
+    ret.next_joint = rn;
 
     ret.width = rw;
 
