@@ -178,10 +178,7 @@ struct mocap_animation_manager
 
         int num_anims = in_progress.replay_list.size();
 
-        if(num_anims > 0)
-        {
-            ImGui::Button(std::to_string(num_anims) + " in animation stack")
-        }
+        ImGui::Button((std::to_string(num_anims) + " in animation stack").c_str());
 
         if(ImGui::Button("Finalise Animation"))
         {
