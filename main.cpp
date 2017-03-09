@@ -41,6 +41,12 @@ struct mocap_animation
 
     void start(leap_motion_capture_manager* capture_manager)
     {
+        if(replay_list.size() == 0)
+        {
+            lg::log("Invalid replay");
+            return;
+        }
+
         current_replay = 0;
         going = true;
 
@@ -48,7 +54,7 @@ struct mocap_animation
 
         cur.start_playblack();*/
 
-        capture_manager->start_replay(replay_list.front(), capture_manager->ctrs);
+        currently_going = capture_manager->start_replay(replay_list.front(), capture_manager->ctrs);
     }
 
     void tick(leap_motion_capture_manager* capture_manager)
@@ -56,12 +62,12 @@ struct mocap_animation
         if(!going)
             return;
 
-        leap_motion_replay& cur = capture_manager->replays[replay_list[current_replay]];
+        //leap_motion_replay& cur = capture_manager->currently_replaying_map[currently_going];
 
         ///we may want to insert interpolation frames
         ///we may want to merge all sub replays into a super replay for ease of interpolate
         ///remember we'd have to patch up ftimes
-        if(cur.finished())
+        if(capture_manager->currently_replaying_map.find(currently_going) == capture_manager->currently_replaying_map.end())
         {
             current_replay++;
 
@@ -73,7 +79,7 @@ struct mocap_animation
 
             //tick(capture_manager);
 
-            capture_manager->start_replay(current_replay, capture_manager->ctrs);
+            currently_going = capture_manager->start_replay(replay_list[current_replay], capture_manager->ctrs);
         }
     }
 
@@ -110,6 +116,8 @@ struct mocap_animation_manager
     void finish_mocap_building_animation()
     {
         animations.push_back(in_progress);
+
+        printf("Size %i\n", animations.back().replay_list.size());
 
         in_progress = mocap_animation();
     }
