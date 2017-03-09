@@ -103,11 +103,6 @@ struct mocap_animation_manager
         manager = manage;
     }
 
-    /*void start_building_animation()
-    {
-        in_progress = mocap_animation();
-    }*/
-
     void push_mocap_animation(int replay_id)
     {
         in_progress.replay_list.push_back(replay_id);
@@ -115,9 +110,10 @@ struct mocap_animation_manager
 
     void finish_mocap_building_animation()
     {
-        animations.push_back(in_progress);
+        if(in_progress.replay_list.size() == 0)
+            return;
 
-        printf("Size %i\n", animations.back().replay_list.size());
+        animations.push_back(in_progress);
 
         in_progress = mocap_animation();
     }
@@ -152,12 +148,13 @@ struct mocap_animation_manager
     {
         ImGui::Begin("Animation UI");
 
+        ///put length of total animation in
         for(int i=0; i<animations.size(); i++)
         {
             std::string id = std::to_string(i);
             std::string anim_length_str = std::to_string(animations[i].replay_list.size());
 
-            std::string button_id = "Launch: " + id + "(" + anim_length_str + ")";
+            std::string button_id = "Launch: " + id + " (" + anim_length_str + ")";
 
             if(ImGui::Button(button_id.c_str()))
             {
@@ -177,6 +174,13 @@ struct mocap_animation_manager
             {
                 push_mocap_animation(i);
             }
+        }
+
+        int num_anims = in_progress.replay_list.size();
+
+        if(num_anims > 0)
+        {
+            ImGui::Button(std::to_string(num_anims) + " in animation stack")
         }
 
         if(ImGui::Button("Finalise Animation"))
