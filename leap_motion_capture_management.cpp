@@ -395,6 +395,8 @@ void leap_motion_capture_manager::tick_ui()
         load("mocap/motion_capture_data");
     }
 
+    ImGui::Checkbox("Fix Clipping (global)", &fix_clipping);
+
     ImGui::End();
 }
 

@@ -513,6 +513,9 @@ int main(int argc, char *argv[])
 
         attach_replays_to_fighter_sword(capture_manager, fight->weapon.obj());
 
+        if(capture_manager.fix_clipping)
+            fix_replays_clipping(capture_manager, fight->weapon.obj());
+
         #if 0
         if(left)
         {

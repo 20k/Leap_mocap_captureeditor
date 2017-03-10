@@ -159,6 +159,8 @@ struct leap_motion_capture_manager
 
     int gid = 0;
 
+    bool fix_clipping = true;
+
     std::map<int, current_replay> currently_replaying_map;
 
     //std::vector<current_replay> currently_replaying;
@@ -273,6 +275,35 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
     }
 }
 
+///not sure i need to do this yet
+inline
+JDIGIT update_bone_system(JDIGIT digit, int bone_id, vec3f offset)
+{
+    if(bone_id == 0)
+        return digit;
+
+    for(int i=bone_id+1; i<4; i++)
+    {
+        digit.bones[i].next_joint += offset;
+        digit.bones[i].prev_joint += offset;
+    }
+
+    return digit;
+}
+
+/*inline
+void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_container* clipping_base)
+{
+
+}*/
+
+///this method of preventing clipping is bad, it produces disformed hand shapes
+///We need to like, actually fix the hand positioning. Maybe save the last valid hand position. Could potentially preprocess the animation and remove all invalid hand states,
+///then we'd interpolate between valid ones (which still may not necessarily be)
+///100% valid, do it on a per finger level?
+///IK would be last resort
+///OK BACKUP
+///If we fix the quaternions this might work ok, they're the main source of it looking bad
 inline
 void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_container* clipping_base)
 {
@@ -283,6 +314,7 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
 
     vec3f reference_forward = reference_rot.get_rotation_matrix() * up;
 
+    float clamp_distance = 15.f;
 
     for(auto& rmap : capture_manager.currently_replaying_map)
     {
@@ -299,14 +331,56 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
             //vec3f hand_pos = hand.digits[2].bones[0].get_pos();
             //quat hand_rot = hand.digits[2].bones[0].rotation;
 
-            for(int kk=0; kk < replay.containers.size(); kk++)
+            for(int digit_id = 0; digit_id < 5; digit_id++)
             {
+                JDIGIT digit = hand.digits[digit_id];
 
-                cid++;
+                for(int bone_id = 0; bone_id < 4; bone_id++)
+                {
+                    ///this is a little hacky and poorly defined
+                    ///should really have a get function or something
+                    vec3f digit_pos = xyz_to_vec(replay.containers[cid]->pos);
+
+                    //vec<N, T> point2line_shortest(const vec<N, T>& lp, const vec<N, T>& ldir, const vec<N, T>& p)
+
+                    vec3f point_to_line = point2line_shortest(reference_pos, reference_forward.norm(), digit_pos);
+
+                    float distance_to_line = point_to_line.length();
+
+
+                    vec3f displace_dir = -point_to_line.norm();
+
+                    float extra_dist = std::max(clamp_distance - distance_to_line, 0.f);
+
+                    vec3f displace_vec = displace_dir * extra_dist;
+
+                    vec3f new_point = digit_pos + displace_vec;
+
+                    replay.containers[cid]->set_pos({new_point.x(), new_point.y(), new_point.z()});
+
+                    if(bone_id > 0)
+                    {
+                        ///ok. We need to find the axis of rotation for the previous bone
+                        ///and then rotate it by the amount the current bone has moved essentially
+                    }
+
+                    //digit = update_bone_system(digit, bone_id, displace_vec);
+
+                    //for(int kk=bone_id+1; kk<4; kk++)
+                    /*for(int kk = bone_id-1; kk > 0; kk--)
+                    {
+                        vec3f pos = xyz_to_vec(replay.containers[cid + kk]->pos);
+
+                        pos = pos + displace_vec;
+
+                        replay.containers[cid + kk]->set_pos({pos.x(), pos.y(), pos.z()});
+                    }*/
+
+                    cid++;
+                }
             }
         }
     }
 }
-
 
 #endif // LEAP_MOTION_CAPTURE_MANAGEMENT_HPP_INCLUDED
