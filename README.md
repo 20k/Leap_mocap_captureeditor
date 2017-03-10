@@ -1,3 +1,1 @@
-# leap-motion-bullet-physics-test
-
-Test scene of leap motion + bullet physics integration, focus on stable leap -> scene interaction including fingergrabbing, throwing and hands being wildly mashed into objects
+Testing leap motion for hand mocap, potentially for defining animation curves, designed to be integrated into the swordfighting game and potentially manually editing animations as well
