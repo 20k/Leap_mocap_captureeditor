@@ -215,7 +215,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
             vec3f hand_pos = hand.digits[2].bones[0].get_pos();
             quat hand_rot = hand.digits[2].bones[0].rotation;
 
-            for(int kk=0; kk < replay.containers.size(); kk++)
+            for(int kk=0; kk < replay.containers.size() && kk < (frame.frame_data.size() * 5 * 4); kk++)
             {
                 vec3f ctr_pos = xyz_to_vec(replay.containers[cid]->pos);
                 quat ctr_rot = replay.containers[cid]->rot_quat;
@@ -266,6 +266,42 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
                 replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
                 replay.containers[cid]->set_dynamic_scale(dyn_scale * base_scale);
+
+                cid++;
+            }
+        }
+    }
+}
+
+inline
+void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_container* clipping_base)
+{
+    vec3f up = {0, 1, 0};
+
+    vec3f reference_pos = xyz_to_vec(clipping_base->pos);
+    quat reference_rot = clipping_base->rot_quat;
+
+    vec3f reference_forward = reference_rot.get_rotation_matrix() * up;
+
+
+
+    for(auto& rmap : capture_manager.currently_replaying_map)
+    {
+        current_replay& replay = rmap.second;
+
+        leap_motion_capture_frame frame = replay.last_interpolated;
+
+        int cid = 0;
+
+        for(auto& hand_data : frame.frame_data)
+        {
+            JHAND& hand = hand_data.second;
+
+            //vec3f hand_pos = hand.digits[2].bones[0].get_pos();
+            //quat hand_rot = hand.digits[2].bones[0].rotation;
+
+            for(int kk=0; kk < replay.containers.size(); kk++)
+            {
 
                 cid++;
             }

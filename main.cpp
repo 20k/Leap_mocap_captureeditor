@@ -34,6 +34,7 @@
 
 ///todays project: when we start an animation, actually mash all the underlying replays together and fire off a super replay
 ///for correct blending etct
+///fix clipping next
 struct mocap_animation
 {
     bool going = false;
