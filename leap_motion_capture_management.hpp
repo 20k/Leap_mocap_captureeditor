@@ -284,7 +284,6 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
     vec3f reference_forward = reference_rot.get_rotation_matrix() * up;
 
 
-
     for(auto& rmap : capture_manager.currently_replaying_map)
     {
         current_replay& replay = rmap.second;
