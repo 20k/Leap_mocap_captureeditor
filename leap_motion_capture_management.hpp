@@ -362,6 +362,39 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
                     {
                         ///ok. We need to find the axis of rotation for the previous bone
                         ///and then rotate it by the amount the current bone has moved essentially
+
+                       objects_container* behind_bone = replay.containers[cid - 1];
+
+                       vec3f behind_pos = xyz_to_vec(behind_bone->pos);
+
+                       vec3f behind_to_old = digit_pos - behind_pos;
+                       vec3f behind_to_new = new_point - behind_pos;
+
+                       float cos_angle = dot(behind_to_old.norm(), behind_to_new.norm());
+
+                       float angle = acos(clamp(cos_angle, -1.f, 1.f));
+
+                       vec3f axis_unrot = {1, 0, 0};
+
+                       vec3f axis = behind_bone->rot_quat.get_rotation_matrix() * axis_unrot;
+
+                       quat rot_offset;
+                       rot_offset.load_from_axis_angle({axis.x(), axis.y(), axis.z(), -angle});
+
+                       mat3f combor = rot_offset.get_rotation_matrix() * behind_bone->rot_quat.get_rotation_matrix();
+
+                       quat result;
+                       result.load_from_matrix(combor);
+
+                       behind_bone->set_rot_quat(result);
+
+                       quat base_quat = replay.containers[cid]->rot_quat;
+                       mat3f base_r = rot_offset.get_rotation_matrix() * base_quat.get_rotation_matrix();
+
+                       quat ret;
+                       ret.load_from_matrix(base_r);
+
+                       replay.containers[cid]->set_rot_quat(ret);
                     }
 
                     //digit = update_bone_system(digit, bone_id, displace_vec);

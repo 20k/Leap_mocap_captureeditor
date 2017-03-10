@@ -186,6 +186,8 @@
 		<Unit filename="hand_firer.hpp" />
 		<Unit filename="hand_to_hand_interact.hpp" />
 		<Unit filename="leap_motion.hpp" />
+		<Unit filename="leap_motion_capture_management.cpp" />
+		<Unit filename="leap_motion_capture_management.hpp" />
 		<Unit filename="leap_object_manager.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="physics_object_manager.hpp" />
