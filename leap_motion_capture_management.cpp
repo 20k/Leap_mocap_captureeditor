@@ -121,6 +121,11 @@ leap_motion_capture_frame leap_motion_replay::get_interpolated_frame()
     {
         uint32_t hid = hands.first;
 
+        JHAND hand = hands.second;
+
+        ///copy all attributes
+        ret.frame_data[hid] = hand;
+
         for(int digit_id = 0; digit_id < 5; digit_id++)
         {
             JDIGIT dig1 = cur.frame_data[hid].digits[digit_id];

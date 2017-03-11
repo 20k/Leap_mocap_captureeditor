@@ -233,16 +233,27 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 ctr_pos = ctr_pos + offset;
 
                 ///FOR RHAND
-                /*quat AA_0;
-                AA_0.load_from_axis_angle({0, 0, 1, -M_PI/2});*/
+                quat AA_0_R;
+                AA_0_R.load_from_axis_angle({0, 0, 1, -M_PI/2});
 
-                quat AA_0;
-                AA_0.load_from_axis_angle({0, 0, 1, -M_PI/2});
+                quat AA_1_R;
+                AA_1_R.load_from_axis_angle({0, 1, 0, M_PI/2 - M_PI/8});
 
-                quat AA_1;
-                AA_1.load_from_axis_angle({0, 1, 0, -M_PI + M_PI/8});
+                quat AA_2_R;
+                AA_2_R.load_from_axis_angle({0, 0, 1, M_PI/8});
 
-                quat combo_quat = AA_0 * AA_1;
+                quat AA_0_L;
+                AA_0_L.load_from_axis_angle({0, 0, 1, -M_PI/2});
+
+                quat AA_1_L;
+                AA_1_L.load_from_axis_angle({0, 1, 0, -M_PI + M_PI/8});
+
+                quat combo_quat;
+
+                if(hand.type == 0)
+                    combo_quat = AA_0_L * AA_1_L;
+                if(hand.type == 1)
+                    combo_quat = AA_2_R * AA_1_R * AA_0_R;
 
                 vec3f new_coordinate_system = combo_quat.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
                 quat new_coordinate_quat = combo_quat * ctr_rot;
