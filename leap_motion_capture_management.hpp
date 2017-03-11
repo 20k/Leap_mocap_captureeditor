@@ -190,6 +190,7 @@ struct leap_motion_capture_manager
     float scale = 10.f;
 
     void init_manual_containers(object_context& context);
+    void hide_manual_containers();
     void tick_ui();
 
     void save(const std::string& prefix);

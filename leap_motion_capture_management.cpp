@@ -324,10 +324,19 @@ void leap_motion_capture_manager::init_manual_containers(object_context& context
         ctr->set_active(true);
 
         ctx->load_active();
+        ctr->hide();
         ctr->set_dynamic_scale(scale);
         ctx->build_request();
 
         ctrs.push_back(ctr);
+    }
+}
+
+void leap_motion_capture_manager::hide_manual_containers()
+{
+    for(auto& i : ctrs)
+    {
+        i->hide();
     }
 }
 

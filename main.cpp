@@ -362,6 +362,7 @@ int main(int argc, char *argv[])
     window.append_opencl_extra_command_line("-D depth_icutoff=100");
     window.append_opencl_extra_command_line("-D LEAP");
     window.load(1680,1050,1000, "turtles", "../openclrenderer/cl2.cl", true);
+    window.window.setVerticalSyncEnabled(false);
 
     ImGui::SFML::Init(window.window);
 
@@ -483,6 +484,7 @@ int main(int argc, char *argv[])
 
         }
 
+        capture_manager.hide_manual_containers();
 
         compute::event event;
 
@@ -493,6 +495,7 @@ int main(int argc, char *argv[])
         leap_object_spawner.tick(0.6f);
 
         capture_manager.tick_replays();
+
 
         std::map<uint32_t, LEAP_HAND> this_hand;
 
