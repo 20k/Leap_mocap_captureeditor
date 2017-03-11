@@ -203,9 +203,9 @@ struct mocap_animation
         ///remember we'd have to patch up ftimes
         if(capture_manager->currently_replaying_map.find(currently_going) == capture_manager->currently_replaying_map.end())
         {
-            current_replay++;
-
-            /*if(current_replay >= replay_list.size())
+            /*
+            current_replay++;
+            if(current_replay >= replay_list.size())
             {
                 going = false;
                 return;
