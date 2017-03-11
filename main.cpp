@@ -109,11 +109,16 @@ struct mocap_animation
 
         leap_motion_replay next_copy = next;
 
+
+        ///START PATCHING HAND IDS
         for(leap_motion_capture_frame& frame : next_copy.mocap.data)
         {
             std::vector<uint32_t> ids_to_erase;
             std::vector<JHAND> replacement_hands;
 
+            ///if we want more hands, we'll have to only patch if the hand id isn't present
+            ///ie we might have two right hands and one left, with one right hand appearing, but the second right hand will currently
+            ///be overwritten to the first. I have no idea if this is a really problematic issue or not, but I guess its worth noting
             for(auto& i : frame.frame_data)
             {
                 JHAND current_hand = i.second;
