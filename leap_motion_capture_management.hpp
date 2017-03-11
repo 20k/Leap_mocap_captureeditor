@@ -246,11 +246,17 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 quat AA_4;
                 AA_4.load_from_axis_angle({0, 1, 0, M_PI/8});
 
-                vec3f new_coordinate_system = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() *  ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
-                mat3f new_coordinate_matr = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
+                quat combo_quat = AA_3 * AA_2 * AA_1 * AA_0 * AA_4;
 
-                quat new_coordinate_quat;
-                new_coordinate_quat.load_from_matrix(new_coordinate_matr);
+                vec3f new_coordinate_system = combo_quat.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
+
+                //vec3f new_coordinate_system = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() *  ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
+                //mat3f new_coordinate_matr = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
+
+                quat new_coordinate_quat = combo_quat * ctr_rot;
+
+                //quat new_coordinate_quat;
+                //new_coordinate_quat.load_from_matrix(new_coordinate_matr);
 
                 ctr_pos = new_coordinate_system;
                 ctr_rot = new_coordinate_quat;
