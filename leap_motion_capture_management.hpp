@@ -150,6 +150,9 @@ struct current_replay
     leap_motion_capture_frame last_interpolated;
 };
 
+///have a get_free_containers method
+///keep track of in use containers
+///have a start_replay_with_internal_containers and etc, then this class can manage their lifetime
 struct leap_motion_capture_manager
 {
     std::vector<leap_motion_replay> replays;
