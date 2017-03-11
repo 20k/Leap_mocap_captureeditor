@@ -195,6 +195,7 @@ struct leap_motion_capture_manager
 };
 
 ///don't move, its vision is based on motion
+///Ok. Works for left hand. Implement right hand as well. Where do we put it on the sword?? We may have to redesign sword
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
@@ -231,32 +232,20 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 ctr_pos = ctr_pos + offset;
 
+                ///FOR RHAND
+                /*quat AA_0;
+                AA_0.load_from_axis_angle({0, 0, 1, -M_PI/2});*/
+
                 quat AA_0;
-                AA_0.load_from_axis_angle({1, 0, 0, M_PI/2});
+                AA_0.load_from_axis_angle({0, 0, 1, -M_PI/2});
 
                 quat AA_1;
-                AA_1.load_from_axis_angle({0, 1, 0, -M_PI/2});
+                AA_1.load_from_axis_angle({0, 1, 0, -M_PI + M_PI/8});
 
-                quat AA_2;
-                AA_2.load_from_axis_angle({1, 0, 0, M_PI/2});
-
-                quat AA_3;
-                AA_3.load_from_axis_angle({0, 0, 1, M_PI});
-
-                quat AA_4;
-                AA_4.load_from_axis_angle({0, 1, 0, M_PI/8});
-
-                quat combo_quat = AA_3 * AA_2 * AA_1 * AA_0 * AA_4;
+                quat combo_quat = AA_0 * AA_1;
 
                 vec3f new_coordinate_system = combo_quat.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
-
-                //vec3f new_coordinate_system = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() *  ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
-                //mat3f new_coordinate_matr = AA_3.get_rotation_matrix() * AA_2.get_rotation_matrix() * AA_1.get_rotation_matrix() * AA_0.get_rotation_matrix() * AA_4.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
-
                 quat new_coordinate_quat = combo_quat * ctr_rot;
-
-                //quat new_coordinate_quat;
-                //new_coordinate_quat.load_from_matrix(new_coordinate_matr);
 
                 ctr_pos = new_coordinate_system;
                 ctr_rot = new_coordinate_quat;
@@ -270,7 +259,6 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 quat sword_coordinates_rot;
                 sword_coordinates_rot.load_from_matrix(sword_coordinates_matr);
 
-
                 replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
                 replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
                 replay.containers[cid]->set_dynamic_scale(dyn_scale * base_scale);
@@ -282,7 +270,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 }
 
 ///not sure i need to do this yet
-inline
+/*inline
 JDIGIT update_bone_system(JDIGIT digit, int bone_id, vec3f offset)
 {
     if(bone_id == 0)
@@ -295,7 +283,7 @@ JDIGIT update_bone_system(JDIGIT digit, int bone_id, vec3f offset)
     }
 
     return digit;
-}
+}*/
 
 /*inline
 void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_container* clipping_base)
