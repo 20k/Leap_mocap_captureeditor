@@ -104,6 +104,7 @@ JBONE leap_motion_replay::interpolate_bones(JBONE b1, JBONE b2, float a)
     return ret;
 }
 
+///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
 leap_motion_capture_frame leap_motion_replay::get_interpolated_frame()
 {
     leap_motion_capture_frame cur = get_current_frame();

@@ -44,9 +44,60 @@ struct mocap_animation
 
     leap_motion_replay merged_replay;
 
-    leap_motion_replay merge_replay(leap_motion_replay& start, leap_motion_replay& next)
+    bool valid_hand_id(int id, const std::vector<int32_t>& hand_ids)
+    {
+        for(auto& i : hand_ids)
+        {
+            if(i == id)
+                return true;
+        }
+
+        return false;
+    }
+
+    int side_hand_to_id(int side, int32_t old_id, const std::vector<int32_t>& valid_ids, const std::vector<int>& sides)
+    {
+        for(int i=0; i<sides.size(); i++)
+        {
+            if(sides[i] == side)
+            {
+                return valid_ids[i];
+            }
+        }
+
+        ///could be that we have a scene with both a left and right hand in, which is stupid
+        lg::log("SEMI ERROR");
+
+        //assert(false);
+
+        return old_id;
+    }
+
+    ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
+    leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next)
     {
         leap_motion_replay ret = start;
+
+        int32_t first_left_id = -1;
+        int32_t first_right_id = -1;
+
+        std::vector<int32_t> hand_ids;
+        std::vector<int> hand_sides; ///0 = left, 1 = right
+
+        for(leap_motion_capture_frame& frame : ret.mocap.data)
+        {
+           for(auto& i : frame.frame_data)
+            {
+                hand_ids.push_back(i.first);
+                hand_sides.push_back(i.second.type);
+            }
+        }
+
+        if(hand_ids.size() > 2)
+            hand_ids.resize(2);
+
+        if(hand_sides.size() > 2)
+            hand_sides.resize(2);
 
         ///these will need to be configurable
         //int frames_of_padding = 1;
@@ -57,6 +108,41 @@ struct mocap_animation
         float start_next_time = finish_time_s + animation_pad_time_s;
 
         leap_motion_replay next_copy = next;
+
+        for(leap_motion_capture_frame& frame : next_copy.mocap.data)
+        {
+            std::vector<uint32_t> ids_to_erase;
+            std::vector<JHAND> replacement_hands;
+
+            for(auto& i : frame.frame_data)
+            {
+                JHAND current_hand = i.second;
+
+                int32_t id = i.first;
+
+                if(!valid_hand_id(id, hand_ids))
+                {
+                    int side = current_hand.type;
+
+                    int new_id = side_hand_to_id(side, id, hand_ids, hand_sides);
+
+                    ids_to_erase.push_back(id);
+                    current_hand.id = new_id;
+
+                    replacement_hands.push_back(current_hand);
+                }
+            }
+
+            for(auto& era : ids_to_erase)
+            {
+                frame.frame_data.erase(era);
+            }
+
+            for(auto& i : replacement_hands)
+            {
+                frame.frame_data[i.id] = i;
+            }
+        }
 
         for(leap_motion_capture_frame& frame : next_copy.mocap.data)
         {
@@ -122,6 +208,8 @@ struct mocap_animation
             //tick(capture_manager);
 
             currently_going = capture_manager->start_replay(replay_list[current_replay], capture_manager->ctrs);*/
+
+            going = false;
 
             return;
         }
@@ -405,7 +493,9 @@ int main(int argc, char *argv[])
         if(leap.hand_history.size() > 0)
             this_hand = leap.hand_history.back();
 
-        capture_manager.set_capture_data(this_hand);
+        if(this_hand.size() > 0)
+            capture_manager.set_capture_data(this_hand);
+
         mocap_manager.tick();
 
         #if 0
