@@ -196,6 +196,7 @@ struct leap_motion_capture_manager
 
 ///don't move, its vision is based on motion
 ///Ok. Works for left hand. Implement right hand as well. Where do we put it on the sword?? We may have to redesign sword
+///Ok. I have an angle for the right hand that I'm ok with. Next up is figuring out wtf we're going to do with the hand placement eh
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
@@ -236,9 +237,11 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 quat AA_0_R;
                 AA_0_R.load_from_axis_angle({0, 0, 1, -M_PI/2});
 
+                ///hand offset from top down, ie the skewiffyness of the hand vertically
                 quat AA_1_R;
                 AA_1_R.load_from_axis_angle({0, 1, 0, M_PI/2 - M_PI/8});
 
+                ///hand offset in the direction of the sword, ie hand tilt
                 quat AA_2_R;
                 AA_2_R.load_from_axis_angle({0, 0, 1, M_PI/8});
 
