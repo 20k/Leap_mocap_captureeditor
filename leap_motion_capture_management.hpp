@@ -223,7 +223,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
             vec3f hand_pos = hand.digits[2].bones[0].get_pos();
             quat hand_rot = hand.digits[2].bones[0].rotation;
 
-            for(int kk=0; kk < replay.containers.size() && kk < (frame.frame_data.size() * 5 * 4); kk++)
+            for(int kk=0; kk < replay.containers.size() && kk < (5 * 4); kk++)
             {
                 vec3f ctr_pos = xyz_to_vec(replay.containers[cid]->pos);
                 quat ctr_rot = replay.containers[cid]->rot_quat;
