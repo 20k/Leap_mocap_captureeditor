@@ -208,13 +208,18 @@ struct leap_motion_capture_manager
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
+    vec3f sword_up = {0, 1, 0};
+
+    vec3f sword_pos = xyz_to_vec(sword_ctr->pos);
+    quat sword_rot = sword_ctr->rot_quat;
+
+    ///ie in direction of point
+    vec3f sword_current_up = sword_rot.get_rotation_matrix() * sword_up;
+
     //for(current_replay& replay : capture_manager.currently_replaying)
     for(auto& rmap : capture_manager.currently_replaying_map)
     {
         current_replay& replay = rmap.second;
-
-        vec3f sword_pos = xyz_to_vec(sword_ctr->pos);
-        quat sword_rot = sword_ctr->rot_quat;
 
         leap_motion_capture_frame frame = replay.last_interpolated;
 
@@ -266,6 +271,19 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 if(hand.type == 1)
                     combo_quat = AA_2_R * AA_1_R * AA_0_R;
 
+                vec3f displace_dir = {0,0,0};
+
+                if(hand.type == 0)
+                {
+                    displace_dir = -sword_current_up * 20;
+                }
+
+                if(hand.type == 1)
+                {
+                    displace_dir = sword_current_up * 30;
+                }
+
+
                 vec3f new_coordinate_system = combo_quat.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
                 quat new_coordinate_quat = combo_quat * ctr_rot;
 
@@ -276,10 +294,9 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 vec3f sword_coordinates_pos = sword_rot.get_rotation_matrix() * flat_hand_relative + sword_pos;
 
-                mat3f sword_coordinates_matr = sword_rot.get_rotation_matrix() * ctr_rot.get_rotation_matrix();
+                sword_coordinates_pos = sword_coordinates_pos + displace_dir;
 
-                quat sword_coordinates_rot;
-                sword_coordinates_rot.load_from_matrix(sword_coordinates_matr);
+                quat sword_coordinates_rot = sword_rot * ctr_rot;
 
                 replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
                 replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
