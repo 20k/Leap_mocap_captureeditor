@@ -284,6 +284,24 @@ struct mocap_animation
         return capture_manager->currently_replaying_map[currently_going].replay.get_frames_remaining();
     }
 
+    void check_and_realloc_looping(leap_motion_capture_manager* capture_manager, int max_acceptable_frames_elapsed, int min_remaining_to_realloc)
+    {
+        leap_motion_replay& replay = capture_manager->currently_replaying_map[currently_going].replay;
+
+        ///not a looping animation, this will free itself
+        if(replay.can_terminate)
+            return;
+
+        if(replay.last_frame >= max_acceptable_frames_elapsed && replay.get_frames_remaining() >= min_remaining_to_realloc)
+        {
+            //lg::log("Prerealloc");
+
+            replay.trim_all_frames_before_current();
+
+            //lg::log("Realloc");
+        }
+    }
+
     void force_stop(leap_motion_capture_manager* capture_manager)
     {
         if(capture_manager->currently_replaying_map.find(currently_going) != capture_manager->currently_replaying_map.end())
@@ -360,6 +378,8 @@ struct perpetual_animation
                 looping_anim.append_into_running(capture_manager, merged_replay);
             }
         }
+
+        looping_anim.check_and_realloc_looping(capture_manager, 100, 100);
     }
 };
 

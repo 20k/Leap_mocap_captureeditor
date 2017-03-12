@@ -45,6 +45,20 @@ leap_motion_capture_frame leap_motion_replay::get_next_frame()
     return mocap.data[last_frame + 1];
 }
 
+void leap_motion_replay::trim_all_frames_before_current()
+{
+    int lm1 = last_frame - 1;
+
+    if(lm1 < 0)
+        return;
+
+    //lg::log("MOCAP SIZE: ", (int)mocap.data.size());
+
+    mocap.data.erase(mocap.data.begin(), mocap.data.begin() + lm1);
+
+    last_frame -= lm1;
+}
+
 bool leap_motion_replay::should_advance_frame()
 {
     leap_motion_capture_frame next_frame = get_next_frame();

@@ -133,12 +133,15 @@ struct leap_motion_replay
     leap_motion_capture_frame get_current_frame();
     leap_motion_capture_frame get_next_frame();
 
+    void trim_all_frames_before_current();
+
     bool should_advance_frame();
 
     ///0 = closest to current frame, 1 = closest to next frame
     float get_frame_frac();
     void conditionally_advance_frame();
     bool finished();
+
 
     JBONE interpolate_bones(JBONE b1, JBONE b2, float a);
 
