@@ -68,7 +68,9 @@ struct mocap_animation
 
         ///could be that we have a scene with both a left and right hand in, which is stupid
         ///ie anim 1 has left hand, anim 2 only right
-        lg::log("SEMI ERROR ANIM STATE HAND CONFLICT ARE YOU BEING AN IDIOT");
+        ///or if anim 1 has left hand, and anim 2 has left AND right
+        ///this is actually a legit use case, for testing at least
+        //lg::log("SEMI ERROR ANIM STATE HAND CONFLICT ARE YOU BEING AN IDIOT");
 
         //assert(false);
 
