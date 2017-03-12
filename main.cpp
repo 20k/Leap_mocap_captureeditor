@@ -192,6 +192,27 @@ struct mocap_animation
         running = res;
     }
 
+    ///so take an animation state. Its interpolating between this frame, and next frame
+    ///so, we clear everything AFTER next frame, then insert our new animation into there
+    void force_merge_into_running_next_frame(leap_motion_capture_manager* capture_manager, const leap_motion_replay& to_force_merge)
+    {
+        leap_motion_replay& cur = capture_manager->currently_replaying_map[currently_going].replay;
+
+        int current_frame = cur.last_frame;
+
+        int next_next_frame = current_frame + 2;
+
+        if(next_next_frame >= cur.mocap.data.size()-1)
+        {
+            append_into_running(capture_manager, to_force_merge);
+            return;
+        }
+
+        cur.mocap.data.resize(next_next_frame);
+
+        cur = merge_replay(cur, to_force_merge);
+    }
+
     void start(leap_motion_capture_manager* capture_manager, bool can_terminate)
     {
         if(replay_list.size() == 0)
@@ -301,6 +322,16 @@ struct perpetual_animation
     void add_animation(mocap_animation& animation)
     {
         queued_animations.push_back(animation);
+    }
+
+    void interrupt_with_animation(leap_motion_capture_manager* capture_manager, mocap_animation& animation)
+    {
+        leap_motion_replay merged_replay = animation.get_merged_replay(capture_manager, true);
+
+        looping_anim.force_merge_into_running_next_frame(capture_manager, merged_replay);
+
+        ///uuh. and then we just like, interrupt it. Ok
+        ///maybe a mocap animation needs a .rewrite_from_frame?
     }
 
     void tick(leap_motion_capture_manager* capture_manager)
@@ -461,6 +492,13 @@ struct perpetual_animation_manager
             if(currently_going.size() > 0 && ImGui::Button(add_id.c_str()))
             {
                 currently_going[0].add_animation(animation);
+            }
+
+            std::string force_id = "Forcibly merge/interrupt into currently looping animation: " + id;
+
+            if(currently_going.size() > 0 && ImGui::Button(force_id.c_str()))
+            {
+                currently_going[0].interrupt_with_animation(capture_manager, animation);
             }
         }
 
