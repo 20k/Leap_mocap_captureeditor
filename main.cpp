@@ -4,6 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <deque>
 
 
 ///todo eventually
@@ -160,7 +161,38 @@ struct mocap_animation
         return ret;
     }
 
-    void start(leap_motion_capture_manager* capture_manager)
+    leap_motion_replay get_merged_replay(leap_motion_capture_manager* capture_manager, bool can_terminate)
+    {
+        leap_motion_replay ret = capture_manager->replays[replay_list.front()];
+
+        ret.can_terminate = can_terminate;
+
+        for(int i=1; i<replay_list.size(); i++)
+        {
+            int id = replay_list[i];
+
+            if(id >= capture_manager->replays.size())
+            {
+                lg::log("INVALID ID MERGED REPLAY", id);
+                continue;
+            }
+
+            ret = merge_replay(ret, capture_manager->replays[replay_list[i]]);
+        }
+
+        return ret;
+    }
+
+    void append_into_running(leap_motion_capture_manager* capture_manager, const leap_motion_replay& to_append)
+    {
+        leap_motion_replay& running = capture_manager->currently_replaying_map[currently_going].replay;
+
+        leap_motion_replay res = merge_replay(running, to_append);
+
+        running = res;
+    }
+
+    void start(leap_motion_capture_manager* capture_manager, bool can_terminate)
     {
         if(replay_list.size() == 0)
         {
@@ -169,6 +201,8 @@ struct mocap_animation
         }
 
         merged_replay = capture_manager->replays[replay_list.front()];
+
+        merged_replay.can_terminate = can_terminate;
 
         current_replay = 0;
         going = true;
@@ -221,9 +255,78 @@ struct mocap_animation
         }
     }
 
+    ///should not ever be used to check for termination etc
+    int get_frames_remaining(leap_motion_capture_manager* capture_manager)
+    {
+        return capture_manager->currently_replaying_map[currently_going].replay.get_frames_remaining();
+    }
+
+    void force_stop(leap_motion_capture_manager* capture_manager)
+    {
+        if(capture_manager->currently_replaying_map.find(currently_going) != capture_manager->currently_replaying_map.end())
+        {
+            capture_manager->currently_replaying_map.erase(currently_going);
+        }
+    }
+
     bool finished()
     {
         return !going;
+    }
+};
+
+///This is it. We're getting there. This is the top conceptual level of directly dealing with animations (ish)
+struct perpetual_animation
+{
+    ///the one that plays 5ever
+    ///ok. Remember that this is a series of mocap replays
+    mocap_animation base_animation;
+    bool going = false;
+
+    std::deque<mocap_animation> queued_animations;
+
+    mocap_animation looping_anim;
+
+    void set_base_animation(mocap_animation& animation)
+    {
+        base_animation = animation;
+        looping_anim = animation;
+    }
+
+    void start(leap_motion_capture_manager* capture_manager)
+    {
+        looping_anim.start(capture_manager, false);
+    }
+
+    void add_animation(mocap_animation& animation)
+    {
+        queued_animations.push_back(animation);
+    }
+
+    void tick(leap_motion_capture_manager* capture_manager)
+    {
+        int remaining_frames = base_animation.get_frames_remaining(capture_manager);
+
+        ///have some frames in flight
+        ///remember that unless we manage this we'll have infinite frames!
+        if(remaining_frames < 100)
+        {
+            if(queued_animations.size() > 0)
+            {
+                mocap_animation next_animation = queued_animations.front();
+                queued_animations.pop_front();
+
+                leap_motion_replay merged_replay = next_animation.get_merged_replay(capture_manager, true);
+
+                looping_anim.append_into_running(capture_manager, merged_replay);
+            }
+            else
+            {
+                leap_motion_replay merged_replay = base_animation.get_merged_replay(capture_manager, false);
+
+                looping_anim.append_into_running(capture_manager, merged_replay);
+            }
+        }
     }
 };
 
@@ -260,7 +363,7 @@ struct mocap_animation_manager
     {
         going_animations.push_back(animations[id]);
 
-        going_animations.back().start(manager);
+        going_animations.back().start(manager, false);
     }
 
     void tick()
@@ -324,6 +427,68 @@ struct mocap_animation_manager
         }
 
         ImGui::End();
+    }
+};
+
+///this is really just a total functionality test i guess... ingame we'd define these manually not through this ui
+struct perpetual_animation_manager
+{
+    std::vector<perpetual_animation> looping_animations;
+    std::vector<perpetual_animation> currently_going;
+
+    void tick_ui(mocap_animation_manager* mocap_manager, leap_motion_capture_manager* capture_manager)
+    {
+        ImGui::Begin("Looping UI");
+
+        for(int i=0; i<mocap_manager->animations.size(); i++)
+        {
+            mocap_animation& animation = mocap_manager->animations[i];
+
+            std::string id = std::to_string(i);
+
+            std::string button_id = "Create new Loop with this animation as the base: " + id;
+
+            if(ImGui::Button(button_id.c_str()))
+            {
+                perpetual_animation panim;
+                panim.set_base_animation(animation);
+
+                looping_animations.push_back(panim);
+            }
+
+            std::string add_id = "Push as one off extra to the currently looping animation: " + id;
+
+            if(currently_going.size() > 0 && ImGui::Button(add_id.c_str()))
+            {
+                currently_going[0].add_animation(animation);
+            }
+        }
+
+        for(int i=0; i<looping_animations.size(); i++)
+        {
+            perpetual_animation& panim = looping_animations[i];
+
+            std::string id = std::to_string(i);
+
+            std::string bid = "Start looping: " + id;
+
+            if(ImGui::Button(bid.c_str()))
+            {
+                currently_going.push_back(panim);
+
+                currently_going.back().start(capture_manager);
+            }
+        }
+
+        ImGui::End();
+    }
+
+    void tick(leap_motion_capture_manager* leap_capture_manager)
+    {
+        for(auto& i : currently_going)
+        {
+            i.tick(leap_capture_manager);
+        }
     }
 };
 
@@ -466,6 +631,8 @@ int main(int argc, char *argv[])
 
     mocap_animation_manager mocap_manager(&capture_manager);
 
+    perpetual_animation_manager looping_animations;
+
     ImGui::NewFrame();
 
     ///use event callbacks for rendering to make blitting to the screen and refresh
@@ -506,6 +673,7 @@ int main(int argc, char *argv[])
             capture_manager.set_capture_data(this_hand);
 
         mocap_manager.tick();
+        looping_animations.tick(&capture_manager);
 
         #if 0
         /*std::vector<leap_object> objects = leap_object_spawner.get_objects();
@@ -685,6 +853,7 @@ int main(int argc, char *argv[])
 
         capture_manager.tick_ui();
         mocap_manager.tick_ui();
+        looping_animations.tick_ui(&mocap_manager, &capture_manager);
 
         ImGui::Render();
         sf::Time t = sf::microseconds(window.get_frametime_ms() * 1000.f);

@@ -22,6 +22,16 @@ float leap_motion_replay::get_time_s()
     return (clk.getElapsedTime().asMicroseconds() / 1000.f) / 1000.f;
 }
 
+///assuming the current frame is complete
+int leap_motion_replay::get_frames_remaining()
+{
+    int current_frame = last_frame;
+
+    int number_of_frames = mocap.data.size();
+
+    return std::max(number_of_frames - current_frame - 1, 0);
+}
+
 leap_motion_capture_frame leap_motion_replay::get_current_frame()
 {
     return mocap.data[last_frame];
@@ -68,7 +78,7 @@ void leap_motion_replay::conditionally_advance_frame()
 
 bool leap_motion_replay::finished()
 {
-    return last_frame >= mocap.data.size()-1;
+    return (last_frame >= mocap.data.size()-1) && can_terminate;
 }
 
 JBONE leap_motion_replay::interpolate_bones(JBONE b1, JBONE b2, float a)
