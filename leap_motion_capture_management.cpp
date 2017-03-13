@@ -404,14 +404,14 @@ void leap_motion_capture_manager::tick_ui()
 
         ImGui::InputText((std::string("Name##") + std::to_string(id)).c_str(), replay.name, sizeof(replay.name) - sizeof(char));
 
-        /*std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
+        std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
 
         if(ImGui::Button(delete_id_str.c_str()))
         {
             replays.erase(replays.begin() + i);
             i--;
             continue;
-        }*/
+        }
     }
 
     if(replays.size() > 0)
