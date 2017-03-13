@@ -498,7 +498,7 @@ struct perpetual_animation_manager
 
             std::string id = std::to_string(i);
 
-            std::string button_id = "Create new Loop with this animation as the base: " + id;
+            std::string button_id = "Create new Loop: " + id;
 
             if(ImGui::Button(button_id.c_str()))
             {
@@ -508,14 +508,14 @@ struct perpetual_animation_manager
                 looping_animations.push_back(panim);
             }
 
-            std::string add_id = "Push as one off extra to the currently looping animation: " + id;
+            /*std::string add_id = "Push as one off extra to the currently looping animation: " + id;
 
             if(currently_going.size() > 0 && ImGui::Button(add_id.c_str()))
             {
                 currently_going[0].add_animation(animation);
-            }
+            }*/
 
-            std::string force_id = "Forcibly merge/interrupt into currently looping animation: " + id;
+            std::string force_id = "Force Merge: " + id;
 
             if(currently_going.size() > 0 && ImGui::Button(force_id.c_str()))
             {
