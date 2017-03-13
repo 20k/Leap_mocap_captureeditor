@@ -80,7 +80,7 @@ struct mocap_animation
     ///ie a + ret = b
     leap_motion_capture_frame get_map_from_a_to_b(const leap_motion_replay& start, const leap_motion_replay& next)
     {
-        return frame_sub(start.mocap.data.back(), next.mocap.data.front());
+        return frame_op(start.mocap.data.back(), next.mocap.data.front(), bone_sub);
     }
 
     ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
