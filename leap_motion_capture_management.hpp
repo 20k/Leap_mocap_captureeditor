@@ -15,10 +15,10 @@ struct object_context;
 
 struct JBONE
 {
-    vec3f prev_joint;
-    vec3f next_joint;
+    vec3f prev_joint = {0,0,0};
+    vec3f next_joint = {0,0,0};
 
-    float width;
+    float width = 0;
 
     quat rotation;
 
@@ -30,20 +30,19 @@ struct JBONE
 
 struct JDIGIT
 {
-    int32_t finger_id;
+    int32_t finger_id = -1;
 
-    JBONE bones[4];
+    JBONE bones[4] = {};
 };
-
 
 struct JHAND
 {
-    uint32_t id;
+    uint32_t id = -1;
 
     ///0 = left, 1 = right
     int type = 0;
 
-    JDIGIT digits[5];
+    JDIGIT digits[5] = {};
 };
 
 inline
