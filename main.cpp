@@ -104,8 +104,7 @@ struct mocap_animation
             hand_sides.resize(2);
 
         ///these will need to be configurable
-        //int frames_of_padding = 1;
-        float animation_pad_time_s = 0.2f;
+        float animation_pad_time_s = 0.1f;
 
         float finish_time_s = start.mocap.data.back().time_s;
 

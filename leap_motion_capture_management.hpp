@@ -116,6 +116,7 @@ struct leap_motion_capture_data
 ///include option to pad beginning and end frames for dynamic blending
 struct leap_motion_replay
 {
+    char name[20] = {0};
     leap_motion_capture_data mocap;
 
     sf::Clock clk;
@@ -177,7 +178,7 @@ struct leap_motion_capture_manager
     bool going = false;
     bool snap = false;
 
-    void add_capture(const leap_motion_capture_data& capture);
+    void add_capture(const leap_motion_capture_data& capture, const std::string& name = "");
     void start_capture();
 
     void set_capture_data(std::map<uint32_t, LEAP_HAND>& hands);

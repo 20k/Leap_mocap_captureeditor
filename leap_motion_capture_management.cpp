@@ -3,6 +3,7 @@
 #include "../openclrenderer/logging.hpp"
 #include "../openclrenderer/objects_container.hpp"
 #include "../imgui/imgui.h"
+#include <tinydir/tinydir.h>
 
 
 void leap_motion_replay::set_replay_data(const leap_motion_capture_data& dat)
@@ -218,9 +219,21 @@ leap_motion_capture_frame leap_motion_replay::position_containers(std::vector<ob
     return frame;
 }
 
-void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& capture)
+void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& capture, const std::string& name)
 {
+    std::string set_name = name;
+
+    if(set_name == "")
+    {
+        set_name = std::to_string(replays.size());
+    }
+
     leap_motion_replay new_replay;
+    //new_replay.name = set_name.c_str();
+
+    int bytes = std::min(set_name.size(), sizeof(new_replay.name));
+
+    memcpy(new_replay.name, set_name.c_str(), bytes);
 
     new_replay.set_replay_data(capture);
 
@@ -389,14 +402,16 @@ void leap_motion_capture_manager::tick_ui()
             start_replay(i, ctrs);
         }
 
-        std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
+        ImGui::InputText((std::string("Name##") + std::to_string(id)).c_str(), replay.name, sizeof(replay.name) - sizeof(char));
+
+        /*std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
 
         if(ImGui::Button(delete_id_str.c_str()))
         {
             replays.erase(replays.begin() + i);
             i--;
             continue;
-        }
+        }*/
     }
 
     if(replays.size() > 0)
@@ -426,12 +441,12 @@ void leap_motion_capture_manager::tick_ui()
 
     if(ImGui::Button("Save"))
     {
-        save("mocap/motion_capture_data");
+        save("mocap/");
     }
 
     if(ImGui::Button("Load"))
     {
-        load("mocap/motion_capture_data");
+        load("mocap/");
     }
 
     ImGui::Checkbox("Fix Clipping (global)", &fix_clipping);
@@ -441,13 +456,22 @@ void leap_motion_capture_manager::tick_ui()
 
 void leap_motion_capture_manager::save(const std::string& prefix)
 {
+    const std::string& extension = ".mocap";
+
     for(int i=0; i<replays.size(); i++)
     {
         leap_motion_replay& replay = replays[i];
 
-        //FILE* pFile = fopen((prefix + std::to_string(i)).c_str(), "wb");
 
-        std::ofstream out(prefix + std::to_string(i), std::ofstream::binary);
+        std::string main_fname = std::to_string(i);
+
+        ///ie we have a string in there
+        if(replay.name[0] != 0)
+        {
+            main_fname = std::string(replay.name);
+        }
+
+        std::ofstream out(prefix + main_fname + extension, std::ofstream::binary);
 
         int num = replay.mocap.data.size();
 
@@ -478,16 +502,34 @@ void leap_motion_capture_manager::load(const std::string& prefix)
 {
     int postfix = 0;
 
+    const std::string& extension = ".mocap";
+
+    tinydir_dir dir;
+    int i;
+    tinydir_open_sorted(&dir, prefix.c_str());
+
     ///ok... dirty hack ;_; we should just use tinydir
     ///remember, if we do this itll only work if files are actually named consecutively, and extras won't be gone
-    while(1)
+    for (i = 0; i < dir.n_files; i++)
     {
-        std::string file = prefix + std::to_string(postfix);
+        tinydir_file tdfile;
+        tinydir_readfile_n(&dir, &tdfile, i);
+
+        if (tdfile.is_dir)
+        {
+            continue;
+        }
+
+        ///we have a double // here but it doesn't seem to matter (due to input having a trailing forward slash)
+        std::string file = std::string(tdfile.path);
+        std::string name = std::string(tdfile.name);
+
+        lg::log(file);
 
         std::ifstream in(file, std::ifstream::binary);
 
         if(!in.good())
-            return;
+            continue;
 
         int num;
 
@@ -524,8 +566,13 @@ void leap_motion_capture_manager::load(const std::string& prefix)
             data.data.push_back(frame);
         }
 
-        add_capture(data);
+        add_capture(data, name);
 
         postfix++;
     }
+
+
+
+    tinydir_close(&dir);
+
 }
