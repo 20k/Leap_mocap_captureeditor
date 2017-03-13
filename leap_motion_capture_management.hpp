@@ -12,6 +12,7 @@
 struct objects_container;
 struct object_context;
 
+
 struct JBONE
 {
     vec3f prev_joint;
@@ -33,6 +34,7 @@ struct JDIGIT
 
     JBONE bones[4];
 };
+
 
 struct JHAND
 {
@@ -85,6 +87,8 @@ struct leap_motion_capture_frame
 
     std::map<uint32_t, JHAND> frame_data;
 };
+
+#include "leap_operators.hpp"
 
 struct leap_motion_capture_data
 {

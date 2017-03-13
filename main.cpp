@@ -77,6 +77,12 @@ struct mocap_animation
         return old_id;
     }
 
+    ///ie a + ret = b
+    leap_motion_capture_frame get_map_from_a_to_b(const leap_motion_replay& start, const leap_motion_replay& next)
+    {
+
+    }
+
     ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
     leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next)
     {
@@ -88,9 +94,12 @@ struct mocap_animation
         std::vector<int32_t> hand_ids;
         std::vector<int> hand_sides; ///0 = left, 1 = right
 
-        for(leap_motion_capture_frame& frame : ret.mocap.data)
+        //for(leap_motion_capture_frame& frame : ret.mocap.data)
+
+        leap_motion_capture_frame& check_frame = ret.mocap.data.back();
+
         {
-           for(auto& i : frame.frame_data)
+            for(auto& i : check_frame.frame_data)
             {
                 hand_ids.push_back(i.first);
                 hand_sides.push_back(i.second.type);
