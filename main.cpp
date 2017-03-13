@@ -83,20 +83,19 @@ struct mocap_animation
         return frame_op(start.mocap.data.back(), next.mocap.data.front(), bone_sub);
     }
 
-    ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
-    leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next)
+    leap_motion_capture_frame get_frame_div(const leap_motion_capture_frame& start, float amount)
     {
-        leap_motion_replay ret = start;
+        return frame_sop(start, amount, bone_div);
+    }
 
-        int32_t first_left_id = -1;
-        int32_t first_right_id = -1;
-
+    leap_motion_replay patch_hand_ids(const leap_motion_replay& start, const leap_motion_replay& next)
+    {
         std::vector<int32_t> hand_ids;
         std::vector<int> hand_sides; ///0 = left, 1 = right
 
         //for(leap_motion_capture_frame& frame : ret.mocap.data)
 
-        leap_motion_capture_frame& check_frame = ret.mocap.data.back();
+        const leap_motion_capture_frame& check_frame = start.mocap.data.back();
 
         {
             for(auto& i : check_frame.frame_data)
@@ -112,15 +111,7 @@ struct mocap_animation
         if(hand_sides.size() > 2)
             hand_sides.resize(2);
 
-        ///these will need to be configurable
-        float animation_pad_time_s = 0.1f;
-
-        float finish_time_s = start.mocap.data.back().time_s;
-
-        float start_next_time = finish_time_s + animation_pad_time_s;
-
         leap_motion_replay next_copy = next;
-
 
         ///START PATCHING HAND IDS
         for(leap_motion_capture_frame& frame : next_copy.mocap.data)
@@ -161,7 +152,27 @@ struct mocap_animation
             }
         }
 
-        for(leap_motion_capture_frame& frame : next_copy.mocap.data)
+        return next_copy;
+    }
+
+    ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
+    leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next)
+    {
+        leap_motion_replay patched = patch_hand_ids(start, next);
+
+        leap_motion_replay ret = start;
+
+
+        ///these will need to be configurable
+        float animation_pad_time_s = 0.1f;
+
+        float finish_time_s = start.mocap.data.back().time_s;
+
+        float start_next_time = finish_time_s + animation_pad_time_s;
+
+
+        ///this is the actual merge step
+        for(leap_motion_capture_frame& frame : patched.mocap.data)
         {
             frame.time_s += start_next_time;
 
