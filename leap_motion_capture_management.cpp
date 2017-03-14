@@ -24,7 +24,7 @@ float leap_motion_replay::get_time_s()
 }
 
 ///assuming the current frame is complete
-int leap_motion_replay::get_frames_remaining()
+int leap_motion_replay::get_frames_remaining() const
 {
     int current_frame = last_frame;
 

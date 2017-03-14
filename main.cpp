@@ -155,6 +155,39 @@ struct mocap_animation
         return next_copy;
     }
 
+    ///oh crap we need to distribute in increments... accumulate divd??
+    void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, const leap_motion_capture_frame& diff, float num_frames)
+    {
+        if(num_frames >= to_modify.get_frames_remaining())
+        {
+            num_frames = to_modify.get_frames_remaining()-1;
+        }
+
+        if(num_frames <= 0)
+            return;
+
+        leap_motion_capture_frame divd = frame_sop(diff, num_frames, bone_div);
+        leap_motion_capture_frame divd_orig = divd;
+
+        for(auto& i : divd.frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
+        }
+
+        int last_frame = to_modify.mocap.data.size()-1;
+
+        //lg::log("Distribute ", num_frames);
+
+        //for(int fnum = last_frame; fnum >= last_frame-num_frames; fnum--)
+        for(int fnum = last_frame - num_frames; fnum <= last_frame; fnum++)
+        {
+            leap_motion_capture_frame& frame = to_modify.mocap.data[fnum];
+
+            frame = frame_op(frame, divd, bone_add);
+            divd = frame_op(divd, divd_orig, bone_add);
+        }
+    }
+
     ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
     leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next)
     {
@@ -162,9 +195,17 @@ struct mocap_animation
 
         leap_motion_replay ret = start;
 
+        leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(patched, start);
+
+        ///uuh. Ok, we'll need to use time later
+        float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
+
+
+        distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
+
 
         ///these will need to be configurable
-        float animation_pad_time_s = 0.1f;
+        float animation_pad_time_s = 0.0001f;
 
         float finish_time_s = start.mocap.data.back().time_s;
 
@@ -435,7 +476,7 @@ struct mocap_animation_manager
     {
         going_animations.push_back(animations[id]);
 
-        going_animations.back().start(manager, false);
+        going_animations.back().start(manager, true);
     }
 
     void tick()

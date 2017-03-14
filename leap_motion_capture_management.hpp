@@ -133,7 +133,7 @@ struct leap_motion_replay
 
     float get_time_s();
 
-    int get_frames_remaining();
+    int get_frames_remaining() const;
     leap_motion_capture_frame get_current_frame();
     leap_motion_capture_frame get_next_frame();
 
