@@ -45,42 +45,10 @@ struct mocap_animation
 
     leap_motion_replay merged_replay;
 
-    bool valid_hand_id(int id, const std::vector<int32_t>& hand_ids)
-    {
-        for(auto& i : hand_ids)
-        {
-            if(i == id)
-                return true;
-        }
-
-        return false;
-    }
-
-    int side_hand_to_id(int side, int32_t old_id, const std::vector<int32_t>& valid_ids, const std::vector<int>& sides)
-    {
-        for(int i=0; i<sides.size(); i++)
-        {
-            if(sides[i] == side)
-            {
-                return valid_ids[i];
-            }
-        }
-
-        ///could be that we have a scene with both a left and right hand in, which is stupid
-        ///ie anim 1 has left hand, anim 2 only right
-        ///or if anim 1 has left hand, and anim 2 has left AND right
-        ///this is actually a legit use case, for testing at least
-        //lg::log("SEMI ERROR ANIM STATE HAND CONFLICT ARE YOU BEING AN IDIOT");
-
-        //assert(false);
-
-        return old_id;
-    }
-
     ///ie a + ret = b
     leap_motion_capture_frame get_map_from_a_to_b(const leap_motion_replay& start, const leap_motion_replay& next)
     {
-        return frame_op(start.mocap.data.back(), next.mocap.data.front(), bone_sub);
+        return frame_op(next.mocap.data.front(), start.mocap.data.back(), bone_sub);
     }
 
     leap_motion_capture_frame get_frame_div(const leap_motion_capture_frame& start, float amount)
@@ -211,7 +179,7 @@ struct mocap_animation
 
         leap_motion_replay ret = start;
 
-        leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(patched, start);
+        leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(start, patched);
 
         ///uuh. Ok, we'll need to use time later
         float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
