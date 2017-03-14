@@ -259,8 +259,8 @@ inline
 leap_motion_capture_frame frame_op(const leap_motion_capture_frame& one, const leap_motion_capture_frame& two, bone_stdfunc bone_func)
 {
     ///????
-    //leap_motion_capture_frame patched_two = patch_frame_hand_ids(one, two);
-    leap_motion_capture_frame patched_two = two;
+    leap_motion_capture_frame patched_two = patch_frame_hand_ids(one, two);
+    //leap_motion_capture_frame patched_two = two;
 
     leap_motion_capture_frame ret = one;
 

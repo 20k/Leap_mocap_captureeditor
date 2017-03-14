@@ -215,7 +215,7 @@ struct mocap_animation
         }*/
 
         ///these will need to be configurable
-        float animation_pad_time_s = 0.01f;
+        float animation_pad_time_s = 0.1f;
 
         float finish_time_s = start.mocap.data.back().time_s;
 
