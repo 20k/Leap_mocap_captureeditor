@@ -137,6 +137,7 @@ LRHAND get_lrhand(const leap_motion_capture_frame& frame)
 }
 
 ///more complex, we're essentially merging the frames
+///ok. We need to properly merge frames here, this is the issue i think
 inline
 leap_motion_capture_frame frame_op(const leap_motion_capture_frame& one, const leap_motion_capture_frame& two, bone_stdfunc bone_func)
 {

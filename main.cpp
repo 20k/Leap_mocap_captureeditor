@@ -156,7 +156,7 @@ struct mocap_animation
     }
 
     ///oh crap we need to distribute in increments... accumulate divd??
-    void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, const leap_motion_capture_frame& diff, float num_frames)
+    void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames)
     {
         if(num_frames >= to_modify.get_frames_remaining())
         {
@@ -169,7 +169,16 @@ struct mocap_animation
         leap_motion_capture_frame divd = frame_sop(diff, num_frames, bone_div);
         leap_motion_capture_frame divd_orig = divd;
 
+        lg::log("Dvd");
+
         for(auto& i : divd.frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
+        }
+
+        lg::log("Orig");
+
+        for(auto& i : diff.frame_data)
         {
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
         }
@@ -179,12 +188,19 @@ struct mocap_animation
         //lg::log("Distribute ", num_frames);
 
         //for(int fnum = last_frame; fnum >= last_frame-num_frames; fnum--)
-        for(int fnum = last_frame - num_frames; fnum <= last_frame; fnum++)
+        for(int fnum = last_frame - num_frames + 2; fnum <= last_frame; fnum++)
         {
             leap_motion_capture_frame& frame = to_modify.mocap.data[fnum];
 
             frame = frame_op(frame, divd, bone_add);
             divd = frame_op(divd, divd_orig, bone_add);
+        }
+
+        lg::log("Acc");
+
+        for(auto& i : divd.frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
         }
     }
 
@@ -200,8 +216,30 @@ struct mocap_animation
         ///uuh. Ok, we'll need to use time later
         float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
 
+        lg::log("Real end of current anim");
+
+        for(auto& i : ret.mocap.data.back().frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
+        }
 
         distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
+
+        lg::log("Ret distributed end");
+
+        for(auto& i : ret.mocap.data.back().frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
+        }
+
+        lg::log("Actual beginning of next anim");
+
+        for(auto& i : patched.mocap.data.front().frame_data)
+        {
+            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
+        }
+
+        lg::log("\n");
 
 
         ///these will need to be configurable
