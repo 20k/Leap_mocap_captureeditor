@@ -21,6 +21,8 @@ JBONE bone_sub(const JBONE& one, const JBONE& two)
     ///one * ret.rotation = two.rotation
     ret.rotation = one.rotation.get_difference(two.rotation);
 
+    ret.rotation = ret.rotation.norm();
+
     return ret;
 }
 
@@ -37,10 +39,13 @@ JBONE bone_add(const JBONE& one, const JBONE& two)
     ///one * ret.rotation = two.rotation
     ret.rotation = one.rotation * two.rotation;
 
+    ret.rotation = ret.rotation.norm();
+
     return ret;
 }
 
 /// < 1 or uuh.. oh well, rotations would be interesting
+///taking fractions of slerp and repeatedly applying might be causing issues
 inline
 JBONE bone_div(const JBONE& one, float two)
 {
@@ -69,6 +74,8 @@ JBONE bone_div(const JBONE& one, float two)
     {
         ret.rotation = one.rotation.inverse();
     }
+
+    ret.rotation = ret.rotation.norm();
 
     return ret;
 }

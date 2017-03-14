@@ -189,7 +189,7 @@ struct mocap_animation
         leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(start, patched);
 
         ///uuh. Ok, we'll need to use time later
-        float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
+        float frames_to_distribute_across = std::min(200.f, (float)start.get_frames_remaining());
 
         /*lg::log("Real end of current anim");
 
