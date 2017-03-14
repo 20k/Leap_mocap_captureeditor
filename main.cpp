@@ -144,7 +144,7 @@ struct mocap_animation
         leap_motion_capture_frame divd = frame_sop(diff, num_frames, bone_div);
         leap_motion_capture_frame divd_orig = divd;
 
-        lg::log("Dvd");
+        /*lg::log("Dvd");
 
         for(auto& i : divd.frame_data)
         {
@@ -156,7 +156,7 @@ struct mocap_animation
         for(auto& i : diff.frame_data)
         {
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
+        }*/
 
         int last_frame = to_modify.mocap.data.size()-1;
 
@@ -171,12 +171,12 @@ struct mocap_animation
             divd = frame_op(divd, divd_orig, bone_add);
         }
 
-        lg::log("Acc");
+        /*lg::log("Acc");
 
         for(auto& i : divd.frame_data)
         {
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
+        }*/
     }
 
     ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
@@ -191,16 +191,16 @@ struct mocap_animation
         ///uuh. Ok, we'll need to use time later
         float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
 
-        lg::log("Real end of current anim");
+        /*lg::log("Real end of current anim");
 
         for(auto& i : ret.mocap.data.back().frame_data)
         {
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
+        }*/
 
         distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
 
-        lg::log("Ret distributed end");
+        /*lg::log("Ret distributed end");
 
         for(auto& i : ret.mocap.data.back().frame_data)
         {
@@ -212,10 +212,10 @@ struct mocap_animation
         for(auto& i : patched.mocap.data.front().frame_data)
         {
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
+        }*/
 
         ///these will need to be configurable
-        float animation_pad_time_s = 0.0001f;
+        float animation_pad_time_s = 0.01f;
 
         float finish_time_s = start.mocap.data.back().time_s;
 

@@ -59,6 +59,17 @@ JBONE bone_div(const JBONE& one, float two)
     ///when 1 we get one.rotation
     ret.rotation = quat::slerp(quat().identity(), one.rotation, interpolate_frac);
 
+    ret.rotation = ret.rotation.inverse();
+
+    if(interpolate_frac < 0.01f)
+    {
+        ret.rotation = quat().identity().inverse();
+    }
+    if(interpolate_frac > 0.99f)
+    {
+        ret.rotation = one.rotation.inverse();
+    }
+
     return ret;
 }
 
@@ -247,6 +258,7 @@ leap_motion_capture_frame patch_frame_hand_ids(const leap_motion_capture_frame& 
 inline
 leap_motion_capture_frame frame_op(const leap_motion_capture_frame& one, const leap_motion_capture_frame& two, bone_stdfunc bone_func)
 {
+    ///????
     //leap_motion_capture_frame patched_two = patch_frame_hand_ids(one, two);
     leap_motion_capture_frame patched_two = two;
 
