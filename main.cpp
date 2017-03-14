@@ -48,7 +48,14 @@ struct mocap_animation
     ///ie a + ret = b
     leap_motion_capture_frame get_map_from_a_to_b(const leap_motion_replay& start, const leap_motion_replay& next)
     {
-        return frame_op(next.mocap.data.front(), start.mocap.data.back(), bone_sub);
+        leap_motion_capture_frame A = next.mocap.data.front();
+        leap_motion_capture_frame B = start.mocap.data.back();
+
+        A = patch_frame_hand_ids(B, A);
+
+        return frame_op(A, B, bone_sub);
+
+        //return frame_op(next.mocap.data.front(), start.mocap.data.back(), bone_sub);
     }
 
     leap_motion_capture_frame get_frame_div(const leap_motion_capture_frame& start, float amount)
@@ -207,9 +214,6 @@ struct mocap_animation
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
         }
 
-        lg::log("\n");
-
-
         ///these will need to be configurable
         float animation_pad_time_s = 0.0001f;
 
@@ -217,6 +221,17 @@ struct mocap_animation
 
         float start_next_time = finish_time_s + animation_pad_time_s;
 
+        //ret.mocap.data.back() = patched.mocap.data.front();
+
+        /*for(int i=ret.mocap.data.size()-5; i < ret.mocap.data.size(); i++)
+        {
+            for(auto& kk : ret.mocap.data[i].frame_data)
+            {
+                lg::log(EXPAND_3(kk.second.digits[0].bones[0].get_pos()));
+            }
+        }
+
+        lg::log("\n");*/
 
         ///this is the actual merge step
         for(leap_motion_capture_frame& frame : patched.mocap.data)
@@ -225,6 +240,18 @@ struct mocap_animation
 
             ret.mocap.data.push_back(frame);
         }
+
+        /*for(leap_motion_capture_frame& frame : ret.mocap.data)
+        {
+            for(auto& kk : frame.frame_data)
+            {
+                lg::log(EXPAND_3(kk.second.digits[0].bones[0].get_pos()));
+            }
+
+            lg::log(frame.time_s);
+        }
+
+        lg::log("end\n\n");*/
 
         return ret;
     }

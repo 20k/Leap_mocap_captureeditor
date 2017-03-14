@@ -243,10 +243,12 @@ leap_motion_capture_frame patch_frame_hand_ids(const leap_motion_capture_frame& 
 
 ///more complex, we're essentially merging the frames
 ///ok. We need to properly merge frames here, this is the issue i think
+///nope. Map consistently sorts them, I don't know why I believed this could possibly be an issue
 inline
 leap_motion_capture_frame frame_op(const leap_motion_capture_frame& one, const leap_motion_capture_frame& two, bone_stdfunc bone_func)
 {
-    leap_motion_capture_frame patched_two = patch_frame_hand_ids(one, two);
+    //leap_motion_capture_frame patched_two = patch_frame_hand_ids(one, two);
+    leap_motion_capture_frame patched_two = two;
 
     leap_motion_capture_frame ret = one;
 
