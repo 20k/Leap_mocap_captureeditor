@@ -55,7 +55,7 @@ JBONE bone_avg(const JBONE& one, const JBONE& two)
 
     ret.width = (one.width + two.width)/2.f;
 
-    ret.rotation = quat::slerp(two.rotation, one.rotation, 0.5f);
+    ret.rotation = quat::slerp(two.rotation, one.rotation, 0.5f).norm();
 
     return ret;
 }
