@@ -219,6 +219,32 @@ leap_motion_capture_frame leap_motion_replay::position_containers(std::vector<ob
     return frame;
 }
 
+leap_motion_replay leap_motion_replay::smooth()
+{
+    leap_motion_replay ret = *this;
+
+    //for(leap_motion_capture_frame& frame : mocap.data)
+    for(int i=0; i<mocap.data.size()-1; i++)
+    {
+        leap_motion_capture_frame& ref_1 = mocap.data[i];
+        leap_motion_capture_frame& ref_2 = mocap.data[i+1];
+
+        leap_motion_capture_frame& ret_frame = ret.mocap.data[i];
+
+        for(auto& fdata : ref_1.frame_data)
+        {
+            const JHAND& j1 = fdata.second;
+            const JHAND& j2 = ref_2.frame_data[fdata.first];
+
+            JHAND rhand = hand_op(j1, j2, bone_avg);
+
+            ret_frame.frame_data[fdata.first] = rhand;
+        }
+    }
+
+    return ret;
+}
+
 void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& capture, const std::string& name)
 {
     std::string set_name = name;
@@ -389,9 +415,20 @@ void leap_motion_capture_manager::tick_ui()
 
         int id = i;
 
-        std::string button_name = "ID: " + std::to_string(id) + " " + "Frames: " + std::to_string(frames);
+        std::string id_str = std::to_string(id);
+
+        std::string button_name = "ID: " + id_str + " " + "Frames: " + std::to_string(frames);
 
         ImGui::Button(button_name.c_str());
+
+        ImGui::SameLine();
+
+        std::string smooth_name = "Smooth##asasdf" + id_str;
+
+        if(ImGui::Button(smooth_name.c_str()))
+        {
+            replay = replay.smooth();
+        }
 
         ImGui::SameLine();
 
@@ -402,7 +439,7 @@ void leap_motion_capture_manager::tick_ui()
             start_replay(i, ctrs);
         }
 
-        ImGui::InputText((std::string("Name##") + std::to_string(id)).c_str(), replay.name, sizeof(replay.name) - sizeof(char));
+        ImGui::InputText((std::string("Name##qwerqer") + id_str).c_str(), replay.name, sizeof(replay.name) - sizeof(char));
 
         std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);
 

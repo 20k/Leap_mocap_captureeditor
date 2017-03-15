@@ -151,6 +151,8 @@ struct leap_motion_replay
 
     leap_motion_capture_frame get_interpolated_frame();
     leap_motion_capture_frame position_containers(std::vector<objects_container*>& containers);
+
+    leap_motion_replay smooth();
 };
 
 struct current_replay

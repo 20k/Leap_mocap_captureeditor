@@ -44,6 +44,22 @@ JBONE bone_add(const JBONE& one, const JBONE& two)
     return ret;
 }
 
+///ok. Adding is a bit of a misnomer because you cant add two quaternions and then divide by two... i think
+inline
+JBONE bone_avg(const JBONE& one, const JBONE& two)
+{
+    JBONE ret = one;
+
+    ret.prev_joint = (one.prev_joint + two.prev_joint)/2.f;
+    ret.next_joint = (one.next_joint + two.next_joint)/2.f;
+
+    ret.width = (one.width + two.width)/2.f;
+
+    ret.rotation = quat::slerp(two.rotation, one.rotation, 0.5f);
+
+    return ret;
+}
+
 /// < 1 or uuh.. oh well, rotations would be interesting
 ///taking fractions of slerp and repeatedly applying might be causing issues
 inline
