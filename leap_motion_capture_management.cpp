@@ -11,11 +11,17 @@ void leap_motion_replay::set_replay_data(const leap_motion_capture_data& dat)
     mocap = dat;
 }
 
+///we could smooth out the internals here?
 void leap_motion_replay::start_playblack()
 {
     clk.restart();
     going = true;
     last_frame = 0;
+
+    /*for(int i=0; i<smooth_level; i++)
+    {
+        *this = smooth();
+    }*/
 }
 
 float leap_motion_replay::get_time_s()
@@ -435,6 +441,8 @@ void leap_motion_capture_manager::tick_ui()
         {
             replay = replay.smooth();
         }
+
+        //ImGui::DragInt(smooth_name.c_str(), &replay.smooth_level, 1, 0, 1000);
 
         ImGui::SameLine();
 

@@ -122,6 +122,8 @@ struct leap_motion_replay
     char name[20] = {0};
     leap_motion_capture_data mocap;
 
+    //int smooth_level = 0;
+
     sf::Clock clk;
     bool going = false;
     int last_frame = 0; ///INTERNAL frame
