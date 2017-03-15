@@ -122,6 +122,11 @@ struct leap_motion_replay
     char name[20] = {0};
     leap_motion_capture_data mocap;
 
+    ///if is exiting, we distribute whole animation error across this replay
+    //bool is_exciting = false;
+    bool exciting_start = false;
+    bool exciting_end = false;
+
     //int smooth_level = 0;
 
     sf::Clock clk;

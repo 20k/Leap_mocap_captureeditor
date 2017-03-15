@@ -453,6 +453,14 @@ void leap_motion_capture_manager::tick_ui()
             start_replay(i, ctrs);
         }
 
+        std::string is_exciting_start_str = std::string("Has Exciting Start###isexcite") + id_str;
+
+        ImGui::Checkbox(is_exciting_start_str.c_str(), &replay.exciting_start);
+
+        std::string is_exciting_end_str = std::string("Has Exciting End###isexcite3434") + id_str;
+
+        ImGui::Checkbox(is_exciting_end_str.c_str(), &replay.exciting_end);
+
         ImGui::InputText((std::string("Name##qwerqer") + id_str).c_str(), replay.name, sizeof(replay.name) - sizeof(char));
 
         std::string delete_id_str = std::string("Delete") + std::string("##fdfdfdf") + std::to_string(i);

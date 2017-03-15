@@ -139,7 +139,7 @@ struct mocap_animation
     }
 
     ///oh crap we need to distribute in increments... accumulate divd??
-    void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames)
+    void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames, float num_frame_mult)
     {
         if(num_frames >= to_modify.get_frames_remaining())
         {
@@ -149,7 +149,7 @@ struct mocap_animation
         if(num_frames <= 0)
             return;
 
-        leap_motion_capture_frame divd = frame_sop(diff, num_frames*2, bone_div);
+        leap_motion_capture_frame divd = frame_sop(diff, num_frames*num_frame_mult, bone_div);
         leap_motion_capture_frame divd_orig = divd;
 
         int last_frame = to_modify.mocap.data.size()-1;
@@ -164,7 +164,7 @@ struct mocap_animation
     }
 
     ///we could distribute the error across the entire thing... but then the end is an issue
-    void distribute_diff_across_start_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames)
+    void distribute_diff_across_start_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames, float num_frame_mult)
     {
         if(num_frames >= to_modify.mocap.data.size()-1)
         {
@@ -174,7 +174,7 @@ struct mocap_animation
         if(num_frames <= 0)
             return;
 
-        leap_motion_capture_frame divd = frame_sop(diff, num_frames*2, bone_div);
+        leap_motion_capture_frame divd = frame_sop(diff, num_frames*num_frame_mult, bone_div);
         leap_motion_capture_frame divd_orig = divd;
 
         for(int fnum=num_frames-1; fnum >= 0; fnum--)
@@ -197,17 +197,66 @@ struct mocap_animation
 
         ///LAST frame of first to FIRST frame of second
         leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(start, patched);
-        leap_motion_capture_frame next_to_start_diff = get_map_from_b_to_a(start, patched);
+        leap_motion_capture_frame start_to_next_inv_diff = get_map_from_b_to_a(start, patched);
+
+        //leap_motion_capture_frame next_to_start = get_map_from_a_to_b(patched, start);
+        //leap_motion_capture_frame next_to_start_inv = get_map_from_b_to_a(patched, start);
 
         ///uuh. Ok, we'll need to use time later
-        float frames_to_distribute_across = std::min(50.f, (float)start.get_frames_remaining());
+        float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
 
         ///else default to slerp
         ///?
         //if(frames_to_distribute_across > 50)
 
-        distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
-        distribute_diff_across_start_of_frame(patched, next_to_start_diff, frames_to_distribute_across);
+        bool distribute_fairly = false;
+
+        if(ret.exciting_end == patched.exciting_start)
+            distribute_fairly = true;
+
+        if(distribute_fairly)
+        {
+            //lg::log("Distributed Fairly");
+
+            distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across, 2);
+            distribute_diff_across_start_of_frame(patched, start_to_next_inv_diff, frames_to_distribute_across, 2);
+        }
+        else
+        {
+            //lg::log("Unfair");
+
+            if(ret.exciting_end)
+            {
+                //lg::log("Distributed at end of cur");
+
+                distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across*2, 1);
+            }
+            else if(patched.exciting_start)
+            {
+                //lg::log("Distributed at start of next");
+
+                distribute_diff_across_start_of_frame(patched, start_to_next_inv_diff, frames_to_distribute_across*2, 1);
+            }
+        }
+
+        ///we'll then use the end of this animation to interpolate
+        /*if(!ret.is_exciting && patched.is_exciting)
+        {
+            ret.is_exciting = true;
+        }*/
+
+
+        ret.exciting_start = false;
+        ret.exciting_end = false;
+
+        //patched.exciting_start = false;
+        //patched.exciting_end = false;
+
+        if(start.exciting_start)
+            ret.exciting_start = true;
+
+        if(next.exciting_end)
+            ret.exciting_end = true;
 
         ///these will need to be configurable
         float animation_pad_time_s = 0.025f;
