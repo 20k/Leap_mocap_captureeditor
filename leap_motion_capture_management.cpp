@@ -93,7 +93,7 @@ void leap_motion_replay::conditionally_advance_frame()
 
 bool leap_motion_replay::finished()
 {
-    return (last_frame >= mocap.data.size()-1) && can_terminate;
+    return (last_frame >= ((int)mocap.data.size())-1) && can_terminate;
 }
 
 JBONE leap_motion_replay::interpolate_bones(JBONE b1, JBONE b2, float a)

@@ -186,6 +186,8 @@ struct mocap_animation
 
         leap_motion_replay ret = start;
 
+        ret.last_frame = 0;
+
         leap_motion_capture_frame start_to_next_diff = get_map_from_a_to_b(start, patched);
 
         ///uuh. Ok, we'll need to use time later
@@ -312,6 +314,11 @@ struct mocap_animation
         cur = merge_replay(cur, to_force_merge);
     }
 
+    void reset()
+    {
+        current_replay = 0;
+    }
+
     void start(leap_motion_capture_manager* capture_manager, bool can_terminate)
     {
         if(replay_list.size() == 0)
@@ -429,6 +436,9 @@ struct perpetual_animation
     {
         base_animation = animation;
         looping_anim = animation;
+
+        base_animation.reset();
+        looping_anim.reset();
     }
 
     void start(leap_motion_capture_manager* capture_manager)
@@ -453,7 +463,9 @@ struct perpetual_animation
 
     void tick(leap_motion_capture_manager* capture_manager)
     {
-        int remaining_frames = base_animation.get_frames_remaining(capture_manager);
+        int remaining_frames = looping_anim.get_frames_remaining(capture_manager);
+
+        printf("%i rem\n", remaining_frames);
 
         ///have some frames in flight
         ///remember that unless we manage this we'll have infinite frames!
@@ -634,6 +646,10 @@ struct perpetual_animation_manager
                 currently_going.push_back(panim);
 
                 currently_going.back().start(capture_manager);
+
+                //leap_motion_replay merged = panim.looping_anim.get_merged_replay(capture_manager, true);
+
+                //lg::log("NUM FRAMES: ", merged.mocap.data.size(), "srem ", merged.get_frames_remaining());
             }
         }
 
