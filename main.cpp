@@ -54,8 +54,6 @@ struct mocap_animation
         A = patch_frame_hand_ids(B, A);
 
         return frame_op(A, B, bone_sub);
-
-        //return frame_op(next.mocap.data.front(), start.mocap.data.back(), bone_sub);
     }
 
     leap_motion_capture_frame get_frame_div(const leap_motion_capture_frame& start, float amount)
@@ -144,25 +142,8 @@ struct mocap_animation
         leap_motion_capture_frame divd = frame_sop(diff, num_frames, bone_div);
         leap_motion_capture_frame divd_orig = divd;
 
-        /*lg::log("Dvd");
-
-        for(auto& i : divd.frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
-
-        lg::log("Orig");
-
-        for(auto& i : diff.frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }*/
-
         int last_frame = to_modify.mocap.data.size()-1;
 
-        //lg::log("Distribute ", num_frames);
-
-        //for(int fnum = last_frame; fnum >= last_frame-num_frames; fnum--)
         for(int fnum = last_frame - num_frames + 2; fnum <= last_frame; fnum++)
         {
             leap_motion_capture_frame& frame = to_modify.mocap.data[fnum];
@@ -170,13 +151,6 @@ struct mocap_animation
             frame = frame_op(frame, divd, bone_add);
             divd = frame_op(divd, divd_orig, bone_add);
         }
-
-        /*lg::log("Acc");
-
-        for(auto& i : divd.frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }*/
     }
 
     ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
@@ -193,32 +167,11 @@ struct mocap_animation
         ///uuh. Ok, we'll need to use time later
         float frames_to_distribute_across = std::min(200.f, (float)start.get_frames_remaining());
 
-        /*lg::log("Real end of current anim");
-
-        for(auto& i : ret.mocap.data.back().frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }*/
-
         ///else default to slerp
         ///?
         //if(frames_to_distribute_across > 50)
 
         distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
-
-        /*lg::log("Ret distributed end");
-
-        for(auto& i : ret.mocap.data.back().frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }
-
-        lg::log("Actual beginning of next anim");
-
-        for(auto& i : patched.mocap.data.front().frame_data)
-        {
-            lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
-        }*/
 
         ///these will need to be configurable
         float animation_pad_time_s = 0.1f;
@@ -227,18 +180,6 @@ struct mocap_animation
 
         float start_next_time = finish_time_s + animation_pad_time_s;
 
-        //ret.mocap.data.back() = patched.mocap.data.front();
-
-        /*for(int i=ret.mocap.data.size()-5; i < ret.mocap.data.size(); i++)
-        {
-            for(auto& kk : ret.mocap.data[i].frame_data)
-            {
-                lg::log(EXPAND_3(kk.second.digits[0].bones[0].get_pos()));
-            }
-        }
-
-        lg::log("\n");*/
-
         ///this is the actual merge step
         for(leap_motion_capture_frame& frame : patched.mocap.data)
         {
@@ -246,18 +187,6 @@ struct mocap_animation
 
             ret.mocap.data.push_back(frame);
         }
-
-        /*for(leap_motion_capture_frame& frame : ret.mocap.data)
-        {
-            for(auto& kk : frame.frame_data)
-            {
-                lg::log(EXPAND_3(kk.second.digits[0].bones[0].get_pos()));
-            }
-
-            lg::log(frame.time_s);
-        }
-
-        lg::log("end\n\n");*/
 
         return ret;
     }
@@ -398,11 +327,7 @@ struct mocap_animation
 
         if(replay.last_frame >= max_acceptable_frames_elapsed && replay.get_frames_remaining() >= min_remaining_to_realloc)
         {
-            //lg::log("Prerealloc");
-
             replay.trim_all_frames_before_current();
-
-            //lg::log("Realloc");
         }
     }
 
@@ -464,8 +389,6 @@ struct perpetual_animation
     void tick(leap_motion_capture_manager* capture_manager)
     {
         int remaining_frames = looping_anim.get_frames_remaining(capture_manager);
-
-        printf("%i rem\n", remaining_frames);
 
         ///have some frames in flight
         ///remember that unless we manage this we'll have infinite frames!
@@ -646,10 +569,6 @@ struct perpetual_animation_manager
                 currently_going.push_back(panim);
 
                 currently_going.back().start(capture_manager);
-
-                //leap_motion_replay merged = panim.looping_anim.get_merged_replay(capture_manager, true);
-
-                //lg::log("NUM FRAMES: ", merged.mocap.data.size(), "srem ", merged.get_frames_remaining());
             }
         }
 
