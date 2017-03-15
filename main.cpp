@@ -203,7 +203,7 @@ struct mocap_animation
         //leap_motion_capture_frame next_to_start_inv = get_map_from_b_to_a(patched, start);
 
         ///uuh. Ok, we'll need to use time later
-        float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
+        float frames_to_distribute_across = std::min(200.f, (float)start.get_frames_remaining());
 
         ///else default to slerp
         ///?
@@ -478,7 +478,7 @@ struct perpetual_animation
         ///have some frames in flight
         ///remember that unless we manage this we'll have infinite frames!
         ///make this == to smoothing length?
-        if(remaining_frames < 100)
+        if(remaining_frames < 300)
         {
             if(queued_animations.size() > 0)
             {
