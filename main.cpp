@@ -392,6 +392,7 @@ struct perpetual_animation
 
         ///have some frames in flight
         ///remember that unless we manage this we'll have infinite frames!
+        ///make this == to smoothing length?
         if(remaining_frames < 100)
         {
             if(queued_animations.size() > 0)

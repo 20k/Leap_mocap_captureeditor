@@ -249,13 +249,19 @@ void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& ca
 {
     std::string set_name = name;
 
+    size_t strip_start = set_name.find(".mocap");
+
+    if(strip_start != std::string::npos)
+    {
+        set_name.resize(strip_start);
+    }
+
     if(set_name == "")
     {
         set_name = std::to_string(replays.size());
     }
 
     leap_motion_replay new_replay;
-    //new_replay.name = set_name.c_str();
 
     int bytes = std::min(set_name.size(), sizeof(new_replay.name));
 
