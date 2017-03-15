@@ -198,6 +198,10 @@ struct mocap_animation
             lg::log(EXPAND_3(i.second.digits[0].bones[0].get_pos()));
         }*/
 
+        ///else default to slerp
+        ///?
+        //if(frames_to_distribute_across > 50)
+
         distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across);
 
         /*lg::log("Ret distributed end");
