@@ -66,14 +66,14 @@ JBONE bone_div(const JBONE& one, float two)
 
     ret.rotation = ret.rotation.inverse();
 
-    if(interpolate_frac < 0.01f)
+    /*if(interpolate_frac < 0.01f)
     {
         ret.rotation = quat().identity().inverse();
     }
     if(interpolate_frac > 0.99f)
     {
         ret.rotation = one.rotation.inverse();
-    }
+    }*/
 
     ret.rotation = ret.rotation.norm();
 
