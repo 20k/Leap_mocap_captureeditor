@@ -289,6 +289,7 @@ void leap_motion_capture_manager::start_capture()
     going = true;
 }
 
+///we really need to skip duplicate hand data
 void leap_motion_capture_manager::set_capture_data(std::map<uint32_t, LEAP_HAND>& hands)
 {
     if(!going)

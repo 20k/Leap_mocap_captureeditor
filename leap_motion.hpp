@@ -73,8 +73,12 @@ struct leap_motion
     int64_t last_frame_id_mt = 0;
     int64_t last_frame_id = 0;
     bool new_frame_available_mt = true; ///so we can make sure we dont request the same two images in a row
+    bool new_frame_available = false;
+
     bool request_finished_mt = true;
     bool request_available_for_processing_mt = false;
+
+    bool received_new_event = false;
 
     uint32_t bpp_mt = 0, width_mt = 0, height_mt = 0;
     float xscale_mt = 0, yscale_mt = 0;
@@ -232,6 +236,11 @@ struct leap_motion
     std::mutex hand_excluder;
     std::mutex buffer_excluder;
     std::mutex frame_excluder;
+
+    bool has_new_event()
+    {
+        return received_new_event;
+    }
 
     void poll()
     {
@@ -461,6 +470,9 @@ struct leap_motion
 
         hand_map = hand_map_mt;
         hand_history = hand_history_mt;
+
+        received_new_event = last_frame_id != last_frame_id_mt;
+
         last_frame_id = last_frame_id_mt;
 
         hand_excluder.unlock();
@@ -499,7 +511,7 @@ struct leap_motion
         is_finished = request_finished_mt;
         buffer_excluder.unlock();
 
-        bool new_frame_available;
+        //bool new_frame_available;
 
         hand_excluder.lock();
         new_frame_available = new_frame_available_mt;

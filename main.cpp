@@ -847,8 +847,9 @@ int main(int argc, char *argv[])
         if(leap.hand_history.size() > 0)
             this_hand = leap.hand_history.back();
 
-        if(this_hand.size() > 0)
+        if(this_hand.size() > 0 && leap.has_new_event())
             capture_manager.set_capture_data(this_hand);
+
 
         mocap_manager.tick();
         looping_animations.tick(&capture_manager);
