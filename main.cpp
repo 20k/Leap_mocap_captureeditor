@@ -18,7 +18,6 @@
 ///rift head movement is wrong
 
 #include "leap_motion.hpp"
-#include "bbox.hpp"
 #include "leap_object_manager.hpp"
 
 
