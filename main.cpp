@@ -239,18 +239,8 @@ struct mocap_animation
             }
         }
 
-        ///we'll then use the end of this animation to interpolate
-        /*if(!ret.is_exciting && patched.is_exciting)
-        {
-            ret.is_exciting = true;
-        }*/
-
-
         ret.exciting_start = false;
         ret.exciting_end = false;
-
-        //patched.exciting_start = false;
-        //patched.exciting_end = false;
 
         if(start.exciting_start)
             ret.exciting_start = true;
