@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     leap_object_manager leap_object_spawner(&context, &leap);
 
     leap_motion_capture_manager capture_manager;
-    capture_manager.init_manual_containers(context);
+    capture_manager.init_manual_containers(context, 4);
 
     mocap_animation_manager mocap_manager(&capture_manager);
 

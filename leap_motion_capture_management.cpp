@@ -391,11 +391,11 @@ void leap_motion_capture_manager::tick_replays()
 }
 
 
-void leap_motion_capture_manager::init_manual_containers(object_context& context)
+void leap_motion_capture_manager::init_manual_containers(object_context& context, int num_hands)
 {
     ctx = &context;
 
-    for(int i=0; i<6 * 5 * 4; i++)
+    for(int i=0; i < num_hands * 5 * 4; i++)
     {
         objects_container* ctr = ctx->make_new();
 
