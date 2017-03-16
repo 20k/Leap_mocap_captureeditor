@@ -209,6 +209,8 @@ struct leap_motion_capture_manager
     float scale = 10.f;
 
     void init_manual_containers(object_context& context, int num_hands);
+    void init_manual_containers_with_col(object_context& context, int num_hands, vec3f col);
+    void destroy_manual_containers();
     void hide_manual_containers();
     void tick_ui();
 

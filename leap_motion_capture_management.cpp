@@ -1,7 +1,8 @@
 #include "leap_motion_capture_management.hpp"
 
 #include "../openclrenderer/logging.hpp"
-#include "../openclrenderer/objects_container.hpp"
+#include "../openclrenderer/obj_load.hpp"
+#include "../openclrenderer/texture.hpp"
 #include "../imgui/imgui.h"
 #include <tinydir/tinydir.h>
 
@@ -409,6 +410,50 @@ void leap_motion_capture_manager::init_manual_containers(object_context& context
 
         ctrs.push_back(ctr);
     }
+}
+
+void leap_motion_capture_manager::init_manual_containers_with_col(object_context& context, int num_hands, vec3f col)
+{
+    ctx = &context;
+
+    texture_context* tex_ctx = &context.tex_ctx;
+
+    texture* ntex = tex_ctx->make_new_cached(col2cachename({col.x(), col.y(), col.z(), 1}));
+
+    sf::Color sfcol(col.x(), col.y(), col.z());
+
+    ntex->set_create_colour(sfcol, 32, 32);
+
+    ///this seems like itll leak textures from the loaded tex
+    for(int i=0; i < num_hands * 5 * 4; i++)
+    {
+        objects_container* ctr = ctx->make_new();
+
+        ctr->set_file("./Res/high_cylinder_forward_low.obj");
+        ctr->set_active(true);
+
+        ctx->load_active();
+
+        for(auto& i : ctr->objs)
+            i.tid = ntex->id;
+
+        ctr->hide();
+        ctr->set_dynamic_scale(scale);
+        ctx->build_request();
+
+        ctrs.push_back(ctr);
+    }
+}
+
+void leap_motion_capture_manager::destroy_manual_containers()
+{
+    for(auto& i : ctrs)
+    {
+        i->set_active(false);
+        i->parent->destroy(i);
+    }
+
+    ctrs.clear();
 }
 
 void leap_motion_capture_manager::hide_manual_containers()
