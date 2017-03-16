@@ -249,7 +249,8 @@ struct mocap_animation
             ret.exciting_end = true;
 
         ///these will need to be configurable
-        float animation_pad_time_s = 0.025f;
+        //float animation_pad_time_s = 0.15f;
+        float animation_pad_time_s = 1/115.f;
 
         float finish_time_s = start.mocap.data.back().time_s;
 
