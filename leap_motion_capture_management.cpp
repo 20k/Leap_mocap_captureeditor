@@ -399,7 +399,7 @@ void leap_motion_capture_manager::init_manual_containers(object_context& context
     {
         objects_container* ctr = ctx->make_new();
 
-        ctr->set_file("../openclrenderer/objects/high_cylinder_forward.obj");
+        ctr->set_file("./Res/high_cylinder_forward_low.obj");
         ctr->set_active(true);
 
         ctx->load_active();
