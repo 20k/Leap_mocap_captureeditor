@@ -325,6 +325,7 @@ void mocap_animation::tick(leap_motion_capture_manager* capture_manager)
     ///we may want to insert interpolation frames
     ///we may want to merge all sub replays into a super replay for ease of interpolate
     ///remember we'd have to patch up ftimes
+    ///the above is now done
     if(capture_manager->currently_replaying_map.find(currently_going) == capture_manager->currently_replaying_map.end())
     {
         /*

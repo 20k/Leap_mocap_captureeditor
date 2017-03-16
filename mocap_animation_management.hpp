@@ -19,19 +19,15 @@ struct mocap_animation
 
     ///ie a + ret = b
     leap_motion_capture_frame get_map_from_a_to_b(const leap_motion_replay& start, const leap_motion_replay& next);
-
     leap_motion_capture_frame get_map_from_b_to_a(const leap_motion_replay& start, const leap_motion_replay& next);
 
     leap_motion_capture_frame get_frame_div(const leap_motion_capture_frame& start, float amount);
+
     leap_motion_replay patch_hand_ids(const leap_motion_replay& start, const leap_motion_replay& next);
 
-    ///oh crap we need to distribute in increments... accumulate divd??
     void distribute_diff_across_end_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames, float num_frame_mult);
-
-    ///we could distribute the error across the entire thing... but then the end is an issue
     void distribute_diff_across_start_of_frame(leap_motion_replay& to_modify, leap_motion_capture_frame& diff, float num_frames, float num_frame_mult);
 
-    ///ok so the issue is, we're interpolating by unique hand ids, rather than hand types
     leap_motion_replay merge_replay(const leap_motion_replay& start, const leap_motion_replay& next);
     leap_motion_replay get_merged_replay(leap_motion_capture_manager* capture_manager, bool can_terminate);
 

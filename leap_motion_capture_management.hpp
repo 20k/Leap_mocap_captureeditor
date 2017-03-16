@@ -221,6 +221,7 @@ struct leap_motion_capture_manager
 ///Ok. Works for left hand. Implement right hand as well. Where do we put it on the sword?? We may have to redesign sword
 ///Ok. I have an angle for the right hand that I'm ok with. Next up is figuring out wtf we're going to do with the hand placement eh
 ///hand placement
+///works fine now
 inline
 void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
 {
@@ -353,6 +354,7 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
 ///IK would be last resort
 ///OK BACKUP
 ///If we fix the quaternions this might work ok, they're the main source of it looking bad
+///works fine now
 inline
 void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_container* clipping_base)
 {
