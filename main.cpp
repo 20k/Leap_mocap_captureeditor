@@ -203,7 +203,7 @@ struct mocap_animation
         //leap_motion_capture_frame next_to_start_inv = get_map_from_b_to_a(patched, start);
 
         ///uuh. Ok, we'll need to use time later
-        float frames_to_distribute_across = std::min(200.f, (float)start.get_frames_remaining());
+        float frames_to_distribute_across = std::min(100.f, (float)start.get_frames_remaining());
 
         ///else default to slerp
         ///?
