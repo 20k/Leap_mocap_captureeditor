@@ -271,7 +271,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 ///hand offset from top down, ie the skewiffyness of the hand vertically
                 quat AA_1_R;
-                AA_1_R.load_from_axis_angle({0, 1, 0, M_PI/2 - M_PI/8});
+                AA_1_R.load_from_axis_angle({0, 1, 0, M_PI/2 - M_PI/5});
 
                 ///hand offset in the direction of the sword, ie hand tilt
                 quat AA_2_R;
@@ -292,14 +292,14 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 vec3f displace_dir = {0,0,0};
 
-                if(hand.type == 0)
-                {
-                    displace_dir = -sword_current_up * 20;
-                }
-
                 if(hand.type == 1)
                 {
-                    displace_dir = sword_current_up * 30;
+                    displace_dir = -sword_current_up * 25;
+                }
+
+                if(hand.type == 0)
+                {
+                    displace_dir = sword_current_up * 10;
                 }
 
 
