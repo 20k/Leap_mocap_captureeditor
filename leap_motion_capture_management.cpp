@@ -251,7 +251,7 @@ leap_motion_replay leap_motion_replay::smooth()
     return ret;
 }
 
-void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& capture, const std::string& name)
+void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& capture, const std::string& name, bool active_start, bool active_end)
 {
     std::string set_name = name;
 
@@ -274,6 +274,9 @@ void leap_motion_capture_manager::add_capture(const leap_motion_capture_data& ca
     memcpy(new_replay.name, set_name.c_str(), bytes);
 
     new_replay.set_replay_data(capture);
+
+    new_replay.exciting_start = active_start;
+    new_replay.exciting_end = active_end;
 
     replays.push_back(new_replay);
 }
@@ -536,6 +539,12 @@ void leap_motion_capture_manager::save(const std::string& prefix)
 
         out.write((const char*)&num, sizeof(num));
 
+        bool active_start = replay.exciting_start;
+        bool active_end = replay.exciting_end;
+
+        out.write((const char*)&active_start, sizeof(active_start));
+        out.write((const char*)&active_end, sizeof(active_end));
+
         for(int m = 0; m < replay.mocap.data.size(); m++)
         {
             leap_motion_capture_frame& frame = replay.mocap.data[m];
@@ -594,6 +603,12 @@ void leap_motion_capture_manager::load(const std::string& prefix)
 
         in.read((char*)&num, sizeof(num));
 
+        bool active_start;
+        bool active_end;
+
+        in.read((char*)&active_start, sizeof(active_start));
+        in.read((char*)&active_end, sizeof(active_end));
+
         leap_motion_capture_data data;
 
         for(int i=0; i<num; i++)
@@ -625,7 +640,7 @@ void leap_motion_capture_manager::load(const std::string& prefix)
             data.data.push_back(frame);
         }
 
-        add_capture(data, name);
+        add_capture(data, name, active_start, active_end);
 
         postfix++;
     }

@@ -190,7 +190,7 @@ struct leap_motion_capture_manager
     bool going = false;
     bool snap = false;
 
-    void add_capture(const leap_motion_capture_data& capture, const std::string& name = "");
+    void add_capture(const leap_motion_capture_data& capture, const std::string& name = "", bool active_start = false, bool active_end = false);
     void start_capture();
 
     void set_capture_data(std::map<uint32_t, LEAP_HAND>& hands);
