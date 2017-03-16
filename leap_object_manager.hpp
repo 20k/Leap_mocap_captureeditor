@@ -81,7 +81,7 @@ struct leap_object_manager
         for(int i=objects.size(); i<bones.size(); i++)
         {
             objects_container* ctr = context->make_new();
-            ctr->set_file("../openclrenderer/objects/high_cylinder_forward.obj");
+            ctr->set_file("Res/high_cylinder_forward_low.obj");
             ctr->set_active(true);
             ///requesting scale will break caching, we cant have a bunch of differently scaled, yet cached objects
             ///yet. Its possible, i just need to figure it out cleanly
