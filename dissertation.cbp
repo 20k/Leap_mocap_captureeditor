@@ -90,6 +90,7 @@
 		<Unit filename="../Sword/game_state_manager.cpp" />
 		<Unit filename="../Sword/game_state_manager.hpp" />
 		<Unit filename="../Sword/imgui_extension.hpp" />
+		<Unit filename="../Sword/leap_mocap_wrapper.cpp" />
 		<Unit filename="../Sword/map_tools.cpp" />
 		<Unit filename="../Sword/map_tools.hpp" />
 		<Unit filename="../Sword/menu.cpp" />
@@ -190,6 +191,10 @@
 		<Unit filename="leap_motion_capture_management.hpp" />
 		<Unit filename="leap_object_manager.hpp" />
 		<Unit filename="main.cpp" />
+		<Unit filename="mocap_animation_management.cpp" />
+		<Unit filename="mocap_animation_management.hpp" />
+		<Unit filename="perpetual_animation_management.cpp" />
+		<Unit filename="perpetual_animation_management.hpp" />
 		<Unit filename="physics_object_manager.hpp" />
 		<Extensions>
 			<code_completion />

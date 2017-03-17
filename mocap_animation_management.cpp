@@ -172,6 +172,12 @@ leap_motion_replay mocap_animation::merge_replay(const leap_motion_replay& start
     if(ret.exciting_end == patched.exciting_start)
         distribute_fairly = true;
 
+    //distribute_fairly = true;
+
+    //distribute_diff_across_end_of_frame(ret, start_to_next_diff, frames_to_distribute_across, 1);
+
+    //distribute_diff_across_start_of_frame(patched, start_to_next_inv_diff, frames_to_distribute_across, 1);
+
     if(distribute_fairly)
     {
         //lg::log("Distributed Fairly");
@@ -207,7 +213,7 @@ leap_motion_replay mocap_animation::merge_replay(const leap_motion_replay& start
         ret.exciting_end = true;
 
     ///these will need to be configurable
-    //float animation_pad_time_s = 0.15f;
+    //float animation_pad_time_s = 0.25f;
     float animation_pad_time_s = 1/115.f;
 
     float finish_time_s = start.mocap.data.back().time_s;
