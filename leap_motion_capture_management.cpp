@@ -692,7 +692,101 @@ void leap_motion_capture_manager::load(const std::string& prefix)
     }
 
 
-
     tinydir_close(&dir);
+}
 
+hand_cosmetics::hand_cosmetics(object_context& ctx)
+{
+    obj = ctx.make_new();
+
+    obj->set_file("Res/gauntlet/knight_hand_cleaned_separated_named.obj");
+    obj->set_active(true);
+    obj->cache = false;
+    obj->independent_subobjects = true;
+
+    ctx.load_active();
+
+    for(object& o : obj->objs)
+    {
+        cl_float4 center = o.get_centre();
+
+        center = {-center.x, -center.y, -center.z, 0.f};
+
+        o.translate_centre(center);
+
+        //std::cout << "LOADED" << o.object_name << std::endl;
+    }
+
+    obj->set_two_sided(true);
+
+    obj->set_dynamic_scale(5.f);
+
+    ctx.build_request();
+}
+
+void hand_cosmetics::position(std::vector<objects_container*>& ctr)
+{
+    ///ok. ctrs represent one hand
+    ///goes digits are y, bones are x
+
+    for(int digit_id = 0; digit_id < 5; digit_id++)
+    {
+        for(int bone_id = 0; bone_id < 4; bone_id++)
+        {
+            int ctr_id = digit_id*4 + bone_id;
+
+            ///tip is 0, goes from 0 -> 2 inclusive
+            int bone_id_for_subobject = (3 - bone_id) + 1;
+
+
+            ///FORMAT: RF[finger_num]P[bone_num]
+            ///right means we need to flip if we're a left hand
+            std::string subobject_string = std::string("RF") + std::to_string(digit_id) + "P" + std::to_string(bone_id_for_subobject);
+
+            objects_container* base_object = ctr[ctr_id];
+            object* o = obj->get_object_by_partial_object_name(subobject_string);
+
+            ///something clearly broken
+            if(o == nullptr)
+            {
+                //lg::log("ERR MISSING CORRECT GAUNTLET .OBJ");
+
+                //return;
+                continue;
+            }
+
+            quat one_eighty;
+            one_eighty.load_from_axis_angle({0, 1, 0, M_PI});
+
+            vec3f child_pos = xyz_to_vec(base_object->pos);
+            quat child_rot = base_object->rot_quat * one_eighty;
+
+            vec3f offset_dir = {0, 1, 0};
+
+            float offset_amount = 5.f;
+
+            if(bone_id_for_subobject == 1)
+            {
+                /*offset_dir = {0, -0.4, -1};
+                offset_amount = 3;
+                o->set_dynamic_scale(8.f);*/
+
+                continue;
+            }
+
+            offset_dir = child_rot.get_rotation_matrix() * offset_dir * offset_amount;
+
+
+            child_pos = child_pos + offset_dir;
+
+            /*
+            ///irrelevant
+            vec3f child_pos = xyz_to_vec(o->pos);
+            ///also irrelevant
+            quat child_rot = o->rot_quat;*/
+
+            o->set_pos({child_pos.x(), child_pos.y(), child_pos.z()});
+            o->set_rot_quat(child_rot);
+        }
+    }
 }

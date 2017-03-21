@@ -327,6 +327,22 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
     }
 }
 
+///scale???
+struct hand_cosmetics
+{
+    objects_container* obj;
+
+    hand_cosmetics(object_context& ctx);
+
+    ~hand_cosmetics()
+    {
+        obj->set_active(false);
+        obj->parent->destroy(obj);
+    }
+
+    void position(std::vector<objects_container*>& ctr);
+};
+
 ///not sure i need to do this yet
 /*inline
 JDIGIT update_bone_system(JDIGIT digit, int bone_id, vec3f offset)
