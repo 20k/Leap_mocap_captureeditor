@@ -327,6 +327,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
     }
 }
 
+#if 0
 ///scale???
 struct hand_cosmetics
 {
@@ -342,6 +343,7 @@ struct hand_cosmetics
 
     void position(std::vector<objects_container*>& ctr);
 };
+#endif
 
 ///not sure i need to do this yet
 /*inline

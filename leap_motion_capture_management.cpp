@@ -695,6 +695,7 @@ void leap_motion_capture_manager::load(const std::string& prefix)
     tinydir_close(&dir);
 }
 
+#if 0
 hand_cosmetics::hand_cosmetics(object_context& ctx)
 {
     obj = ctx.make_new();
@@ -792,3 +793,4 @@ void hand_cosmetics::position(std::vector<objects_container*>& ctr)
 
     obj->hide();
 }
+#endif
