@@ -699,7 +699,7 @@ hand_cosmetics::hand_cosmetics(object_context& ctx)
 {
     obj = ctx.make_new();
 
-    obj->set_file("Res/gauntlet/knight_hand_cleaned_separated_named.obj");
+    obj->set_file("Res/gauntlet/knight_hand_cleaned_separated_named2.obj");
     obj->set_active(true);
     obj->cache = false;
     obj->independent_subobjects = true;
@@ -789,4 +789,6 @@ void hand_cosmetics::position(std::vector<objects_container*>& ctr)
             o->set_rot_quat(child_rot);
         }
     }
+
+    obj->hide();
 }
