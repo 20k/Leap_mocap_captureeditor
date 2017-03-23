@@ -232,6 +232,8 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
     vec3f sword_pos = xyz_to_vec(sword_ctr->pos);
     quat sword_rot = sword_ctr->rot_quat;
 
+    //printf("Sword pos %f %f %f   %f %f %f %f\n", EXPAND_3(sword_pos), sword_rot.q.x(), sword_rot.q.y(), sword_rot.q.z(), sword_rot.q.w());
+
     ///ie in direction of point
     vec3f sword_current_up = sword_rot.get_rotation_matrix() * sword_up;
 
@@ -248,8 +250,14 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
         {
             JHAND& hand = hand_data.second;
 
+            ///nans seem to originate in underlying data, add to investigation list
             vec3f hand_pos = hand.digits[2].bones[0].get_pos();
             quat hand_rot = hand.digits[2].bones[0].rotation;
+
+            if(std::isnan(hand_pos.x()) || std::isnan(hand_pos.y()) || std::isnan(hand_pos.z()))
+                continue;
+
+            //printf("hand pos %f %f %f\n", EXPAND_3(hand_pos));
 
             for(int kk=0; kk < replay.containers.size() && kk < (5 * 4); kk++)
             {
@@ -317,9 +325,20 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
 
                 quat sword_coordinates_rot = sword_rot * ctr_rot;
 
+                if(any_nan(sword_coordinates_pos))
+                    continue;
+
+                if(any_nan(sword_coordinates_rot.q))
+                    continue;
+
                 replay.containers[cid]->set_pos({sword_coordinates_pos.x(), sword_coordinates_pos.y(), sword_coordinates_pos.z()});
                 replay.containers[cid]->set_rot_quat(sword_coordinates_rot);
                 replay.containers[cid]->set_dynamic_scale(dyn_scale * base_scale);
+
+                /*if(cid == 8)
+                {
+                    printf("BONE CENTER SET %f %f %f\n", EXPAND_3(sword_coordinates_pos));
+                }*/
 
                 cid++;
             }
@@ -411,6 +430,9 @@ void fix_replays_clipping(leap_motion_capture_manager& capture_manager, objects_
                     ///this is a little hacky and poorly defined
                     ///should really have a get function or something
                     vec3f digit_pos = xyz_to_vec(replay.containers[cid]->pos);
+
+                    if(any_nan(digit_pos))
+                        continue;
 
                     //vec<N, T> point2line_shortest(const vec<N, T>& lp, const vec<N, T>& ldir, const vec<N, T>& p)
 

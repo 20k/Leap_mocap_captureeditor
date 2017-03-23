@@ -201,6 +201,8 @@ leap_motion_capture_frame leap_motion_replay::position_containers(std::vector<ob
             {
                 JBONE bone = dig.bones[bone_id];
 
+                ///this may be where nans are being introduced if underlying data has nans
+
                 //int id = hid * 5 * 4 + digit_id * 4 + bone_id;
 
                 if(cid >= containers.size())
@@ -210,6 +212,9 @@ leap_motion_capture_frame leap_motion_replay::position_containers(std::vector<ob
                 }
 
                 objects_container* ctr = containers[cid];
+
+                if(any_nan(bone.get_pos()))
+                    continue;
 
                 ctr->set_pos({bone.get_pos().x(), bone.get_pos().y(), bone.get_pos().z()});
                 ctr->set_rot_quat(bone.rotation);
