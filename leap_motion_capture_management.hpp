@@ -219,13 +219,28 @@ struct leap_motion_capture_manager
     void load(const std::string& prefix);
 };
 
+quat get_default_lhand_rot();
+quat get_default_rhand_rot();
+
+vec3f get_default_lhand_offset(vec3f current_up);
+vec3f get_default_rhand_offset(vec3f current_up);
+
+struct hand_offset_info
+{
+    quat lhand_rot = get_default_lhand_rot();
+    quat rhand_rot = get_default_rhand_rot();
+
+    vec3f (*get_lhand_offset)(vec3f) = get_default_lhand_offset;
+    vec3f (*get_rhand_offset)(vec3f) = get_default_rhand_offset;
+};
+
 ///don't move, its vision is based on motion
 ///Ok. Works for left hand. Implement right hand as well. Where do we put it on the sword?? We may have to redesign sword
 ///Ok. I have an angle for the right hand that I'm ok with. Next up is figuring out wtf we're going to do with the hand placement eh
 ///hand placement
 ///works fine now
 inline
-void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f)
+void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manager, objects_container* sword_ctr, float dyn_scale = 0.6f, float base_scale = 10.f, hand_offset_info offset_info = hand_offset_info())
 {
     vec3f sword_up = {0, 1, 0};
 
@@ -274,7 +289,7 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 ctr_pos = ctr_pos + offset;
 
                 ///FOR RHAND
-                quat AA_0_R;
+                /*quat AA_0_R;
                 AA_0_R.load_from_axis_angle({0, 0, 1, -M_PI/2});
 
                 ///hand offset from top down, ie the skewiffyness of the hand vertically
@@ -296,20 +311,21 @@ void attach_replays_to_fighter_sword(leap_motion_capture_manager& capture_manage
                 if(hand.type == 0)
                     combo_quat = AA_0_L * AA_1_L;
                 if(hand.type == 1)
-                    combo_quat = AA_2_R * AA_1_R * AA_0_R;
+                    combo_quat = AA_2_R * AA_1_R * AA_0_R;*/
+
+                quat combo_quat;
+
+                if(hand.type == 0)
+                    combo_quat = offset_info.lhand_rot;
+                if(hand.type == 1)
+                    combo_quat = offset_info.rhand_rot;
 
                 vec3f displace_dir = {0,0,0};
 
-                if(hand.type == 1)
-                {
-                    displace_dir = -sword_current_up * 25;
-                }
-
                 if(hand.type == 0)
-                {
-                    displace_dir = sword_current_up * 10;
-                }
-
+                    displace_dir = offset_info.get_lhand_offset(sword_current_up);
+                if(hand.type == 1)
+                    displace_dir = offset_info.get_rhand_offset(sword_current_up);
 
                 vec3f new_coordinate_system = combo_quat.get_rotation_matrix() * ((ctr_pos - hand_pos) * dyn_scale) + hand_pos;
                 quat new_coordinate_quat = combo_quat * ctr_rot;

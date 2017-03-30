@@ -700,6 +700,44 @@ void leap_motion_capture_manager::load(const std::string& prefix)
     tinydir_close(&dir);
 }
 
+quat get_default_lhand_rot()
+{
+    quat AA_0_L;
+    AA_0_L.load_from_axis_angle({0, 0, 1, -M_PI/2});
+
+    quat AA_1_L;
+    AA_1_L.load_from_axis_angle({0, 1, 0, -M_PI + M_PI/8});
+
+    return AA_0_L * AA_1_L;
+}
+
+quat get_default_rhand_rot()
+{
+    ///hand offset in the direction of the sword, ie hand tilt
+    quat AA_0_R;
+    AA_0_R.load_from_axis_angle({0, 0, 1, M_PI/8});
+
+    ///hand offset from top down, ie the skewiffyness of the hand vertically
+    quat AA_1_R;
+    AA_1_R.load_from_axis_angle({0, 1, 0, M_PI/2 - M_PI/5});
+
+    quat AA_2_R;
+    AA_2_R.load_from_axis_angle({0, 0, 1, -M_PI/2});
+
+    return AA_0_R * AA_1_R * AA_2_R;
+}
+
+///up as in along the sword
+vec3f get_default_lhand_offset(vec3f current_up)
+{
+    return current_up * 10;
+}
+
+vec3f get_default_rhand_offset(vec3f current_up)
+{
+    return -current_up * 25;
+}
+
 #if 0
 hand_cosmetics::hand_cosmetics(object_context& ctx)
 {
